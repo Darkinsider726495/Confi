@@ -1,0 +1,5 @@
+e2e_hud exit=0
+e2e_voz_memoria exit=0
+e2e_cerebro exit=0
+e2e_maos exit=0
+e2e_prefrontal exit=0

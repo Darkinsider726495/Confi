@@ -1,0 +1,62 @@
+TT = ["test_tarefas", "test_tarefas_integracao", "test_tarefas_metas"]
+TB = ["test_broker_estruturado", "test_tarefas"]
+TR, BR, PF = "friday/tarefas.py", "friday/broker.py", "friday/prefrontal.py"
+MUTANTES = [
+ # --- corretor: eventos e resultado estruturado
+ ("corretor: observador que quebra derruba o corretor", BR, "        try:\n            f(copy.deepcopy(ev))\n        except Exception:\n            pass", "        f(copy.deepcopy(ev))", TB),
+ ("corretor: observador recebe o evento original (sem cópia)", BR, "f(copy.deepcopy(ev))", "f(ev)", TB),
+ ("corretor: execução não avisa ninguém", BR, "    _emitir(tipo=\"executada\", ferramenta=nome, args=args, resultado=r,", "    (lambda **k: None)(tipo=\"executada\", ferramenta=nome, args=args, resultado=r,", TB),
+ ("corretor: confirmação por voz sem o id da pendência", BR, "\"confirmado_voz\", ajustes=p.get(\"ajustes\"), pendencia=p[\"id\"])", "\"confirmado_voz\", ajustes=p.get(\"ajustes\"), pendencia=None)", TB),
+ ("corretor: confirmação pelo botão sem o id da pendência", BR, "\"confirmado_botao\", ajustes=p.get(\"ajustes\"), pendencia=p[\"id\"])", "\"confirmado_botao\", ajustes=p.get(\"ajustes\"), pendencia=None)", TB),
+ ("corretor: cancelamento por voz não avisa", BR, "            _emitir(tipo=\"cancelada\", ferramenta=p[\"nome\"], pendencia=p[\"id\"], nivel=p[\"nivel\"], decisao=\"cancelado\")\n            return True, \"Cancelado.\"", "            return True, \"Cancelado.\"", TB),
+ ("corretor: cancelamento pelo painel não avisa", BR, "            _emitir(tipo=\"cancelada\", ferramenta=PEND[\"nome\"], pendencia=PEND[\"id\"], nivel=PEND[\"nivel\"], decisao=\"cancelado\")\n        PEND = None", "        PEND = None", TB),
+ ("corretor: expiração não avisa", BR, "        _emitir(tipo=\"expirada\", ferramenta=PEND[\"nome\"], pendencia=PEND[\"id\"], nivel=PEND[\"nivel\"], decisao=\"expirado\")\n", "", TB),
+ ("corretor: substituição não avisa", BR, "            _emitir(tipo=\"substituida\", ferramenta=PEND[\"nome\"], pendencia=PEND[\"id\"], nivel=PEND[\"nivel\"], decisao=\"substituido\")\n", "", TB),
+ ("corretor: erro da ferramenta vira código «ok»", BR, "    codigo = f\"Erro: {erro}\" if erro else (\"Erro\" if r.startswith(\"Erro\") else \"ok\")", "    codigo = \"ok\"", TB),
+ ("corretor: pendência sem id no resultado", BR, "        return _res(\"pendente\", texto, \"pendente\", n, pid, ajustes)", "        return _res(\"pendente\", texto, \"pendente\", n, None, ajustes)", TB),
+ # --- tarefas: máquina de estados
+ ("tarefas: execução pode concluir sem conferir", TR, "    EXECUTANDO: {VERIFICANDO, BLOQUEADA, FALHOU, PRECISA_INTERVENCAO, CANCELADA},", "    EXECUTANDO: {VERIFICANDO, BLOQUEADA, FALHOU, PRECISA_INTERVENCAO, CANCELADA, CONCLUIDA},", TT),
+ ("tarefas: transição não é validada", TR, "    if novo not in TRANSICOES.get(antigo, ()):\n        raise TransicaoInvalida(f\"{antigo} → {novo} não é permitido\")\n", "", TT),
+ ("tarefas: estado final tem saída", TR, "    CONCLUIDA: set(),", "    CONCLUIDA: {PRONTA},", TT),
+ # --- tarefas: o efeito manda, não a resposta
+ ("tarefas: falso sucesso (refutado) vira verificado", TR, "    elif v == V.REFUTADO:\n        p[\"estado\"] = \"refutado\"", "    elif v == V.REFUTADO:\n        p[\"estado\"] = \"verificado\"", TT),
+ ("tarefas: sem conferência vira verificado", TR, "    else:\n        p[\"estado\"] = \"sem_verificacao\"\n\n\ndef _resolver", "    else:\n        p[\"estado\"] = \"verificado\"\n\n\ndef _resolver", TT),
+ ("tarefas: erro da ferramenta sem conferência vira sem_verificacao", TR, "    elif r.get(\"erro\"):\n        p[\"estado\"] = \"falhou\"", "    elif False:\n        p[\"estado\"] = \"falhou\"", TT),
+ ("tarefas: conclui mesmo com passo só executado", TR, "    if all(p[\"estado\"] == \"verificado\" for p in t[\"passos\"]):", "    if True:", TT),
+ ("tarefas: falha de passo não derruba a tarefa", TR, "    falhos = [p for p in t[\"passos\"] if p[\"estado\"] in (\"refutado\", \"falhou\")]", "    falhos = []", TT),
+ ("tarefas: passo depende de passo só executado", TR, "    return all(_passo(t, d) and _passo(t, d)[\"estado\"] == \"verificado\" for d in p[\"depende_de\"])", "    return True", TT),
+ ("tarefas: conferência é a resposta da ferramenta", TR, "        ver = V.depois(ferr, args, marca, r[\"texto\"], r[\"erro\"])", "        ver = {\"veredito\": \"confirmado\", \"forca\": \"independente\", \"evidencia\": \"x\", \"em\": 0}", TT),
+ ("tarefas: confirmação do dono vira «verificado» sem conferir", TR, "            ver = V.depois(ferr, args, marca, str(ev.get(\"resultado\", \"\")), bool(ev.get(\"erro\")))", "            ver = {\"veredito\": \"confirmado\", \"forca\": \"independente\", \"evidencia\": \"x\", \"em\": 0}", TT),
+ # --- tarefas: gravação, travas, concorrência
+ ("tarefas: não grava antes de executar", TR, "        ARQ.salvar()                                      # gravado ANTES de chamar o corretor", "        pass", TT),
+ ("tarefas: dois executam o mesmo passo", TR, "        if t[\"estado\"] == EXECUTANDO:\n            return fim(\"já está em execução\")\n", "", TT),
+ ("tarefas: trava presa durante a chamada ao corretor", TR, "        r = B.executar_estruturado(ferr, args, turno)       # SEM a trava das tarefas", "        with _trava:\n            r = B.executar_estruturado(ferr, args, turno)", TT),
+ ("tarefas: observador duplicado", TR, "    B.OBSERVADORES[:] = [f for f in B.OBSERVADORES if not getattr(f, \"_friday_tarefas\", False)]\n", "", TT),
+ ("tarefas: ignora o cancelamento da confirmação", TR, "        if tipo not in (\"executada\", \"cancelada\", \"expirada\", \"substituida\"):", "        if tipo not in (\"executada\", \"expirada\", \"substituida\"):", TT),
+ ("tarefas: ignora a expiração/substituição", TR, "        if tipo not in (\"executada\", \"cancelada\", \"expirada\", \"substituida\"):", "        if tipo not in (\"executada\", \"cancelada\"):", TT),
+ ("tarefas: cancelar derruba qualquer confirmação", TR, "        if atual and atual.get(\"id\") == pend:", "        if atual:", TT),
+ ("tarefas: cancelada no meio deixa a confirmação solta", TR, "                    sobra = r[\"pendencia\"]", "                    sobra = None", TT),
+ ("tarefas: cancelada no meio reabre a tarefa", TR, "        if t[\"estado\"] == CANCELADA:                         # o dono cancelou durante a execução", "        if False:                         # o dono cancelou durante a execução", TT),
+ ("tarefas: erro do corretor vira falha simples (e repete)", TR, "        p[\"estado\"], p[\"codigo\"] = \"intervencao\", P.redigir(f\"Erro: {inesperado}\", 60)", "        p[\"estado\"], p[\"codigo\"] = \"pendente\", P.redigir(f\"Erro: {inesperado}\", 60)", TT),
+ ("tarefas: caminho da conversa repete depois da chamada", TR, "        if r.get(\"motivo\") and not r.get(\"passo\"):", "        if True:", TT),
+ ("tarefas: sem argumentos guardados executa com vazio", TR, "        if args is None:\n            p[\"estado\"] = \"intervencao\"", "        args = args if args is not None else {}\n        if args is None:\n            p[\"estado\"] = \"intervencao\"", TT),
+ ("tarefas: retomar não confere antes de repetir", TR, "    if not p.get(\"marca\") or not V.conferivel(p[\"ferramenta\"]) or V.classe(p[\"ferramenta\"]) != \"independente\":\n        return None", "    return None", TT),
+ ("tarefas: dono confirma tarefa concluída/qualquer estado", TR, "        if t[\"estado\"] not in (EXECUTADA_SEM_VERIFICACAO, PRECISA_INTERVENCAO):\n            return False, f\"a tarefa está", "        if False:\n            return False, f\"a tarefa está", TT),
+ # --- tarefas: privacidade
+ ("tarefas: guarda os argumentos de ação de nível 2", TR, "    if nivel > 1 or not _args_ok(args):", "    if not _args_ok(args):", TT),
+ ("tarefas: guarda argumento sensível", TR, "    return not any(isinstance(v, str) and M.sensivel(v) for v in args.values())", "    return True", TT),
+ ("tarefas: guarda os argumentos das tarefas da conversa", TR, "guardar = t[\"contexto\"][\"origem\"] != \"ia\" and _args_guardaveis(p[\"args\"], p[\"nivel\"])", "guardar = _args_guardaveis(p[\"args\"], p[\"nivel\"])", TT),
+ ("tarefas: objetivo sem redação", TR, "    return P.redigir(\" \".join(v.split()), n)[:n] if isinstance(v, str) else \"\"", "    return \" \".join(v.split())[:n] if isinstance(v, str) else \"\"", TT),
+ ("tarefas: terminou e o conteúdo continua no registro", TR, "            p[\"args\"] = None                                # terminou: o conteúdo não é mais necessário (o resumo e a conferência ficam)", "            pass", TT),
+ ("tarefas: guarda o texto da resposta", TR, "    p[\"codigo\"], p[\"tam\"] = P.redigir(str(r.get(\"codigo\", \"\")), 60), len(str(r.get(\"texto\", \"\")))", "    p[\"codigo\"], p[\"tam\"] = P.redigir(str(r.get(\"codigo\", \"\")), 60), len(str(r.get(\"texto\", \"\")))\n    p[\"resultado\"] = r.get(\"texto\")", TT),
+ ("tarefas: estado adulterado é aceito", TR, "    estado = x.get(\"estado\") if x.get(\"estado\") in ESTADOS else PRECISA_INTERVENCAO", "    estado = x.get(\"estado\")", TT),
+ ("tarefas: id de tarefa qualquer é aceito", TR, "    if not isinstance(tid, str) or not _ID_TAREFA.fullmatch(tid) or not isinstance(x, dict) or x.get(\"id\") != tid:", "    if not isinstance(x, dict):", TT),
+ ("tarefas: ferramenta qualquer é aceita no disco", TR, "    if not isinstance(ferr, str) or not _FERR.fullmatch(ferr):\n        return None", "    if not isinstance(ferr, str):\n        return None", TT),
+ ("tarefas: o contador de ids volta", TR, "    padrao[\"proximo\"] = max(_inteiro(lido.get(\"proximo\"), 1, 10**6, 1), maior + 1)", "    padrao[\"proximo\"] = maior + 1", TT),
+ ("tarefas: tarefa terminada não deixa foto no histórico", TR, "        _historico({\"tarefa\": t[\"id\"], \"snapshot\": _sem_args(t)})", "        pass", ["test_tarefas"]),
+ # --- pré-córtex
+ ("pré-córtex: andamento chega a 100% sem concluir", PF, "        return round(0.9 * t[\"concluidas\"] / t[\"total\"], 3) if t and t.get(\"total\") else 0.0", "        return round(1.0 * t[\"concluidas\"] / t[\"total\"], 3) if t and t.get(\"total\") else 0.0", TT),
+ ("pré-córtex: qualquer tarefa da meta conclui", PF, "    if q.get(\"tarefas_por_meta\", {}).get(m[\"id\"], {}).get(\"conclui\"):", "    if q.get(\"tarefas_por_meta\", {}).get(m[\"id\"], {}).get(\"total\"):", TT),
+ ("pré-córtex: tarefa de outra meta conta", PF, "    if q.get(\"tarefas_por_meta\", {}).get(m[\"id\"], {}).get(\"conclui\"):", "    if any(v.get(\"conclui\") for v in q.get(\"tarefas_por_meta\", {}).values()):", TT),
+ ("tarefas: marca de concluir ignorada", TR, "                r[\"conclui\"] = r[\"conclui\"] or t[\"contexto\"][\"conclui_meta\"]", "                r[\"conclui\"] = True", TT),
+]

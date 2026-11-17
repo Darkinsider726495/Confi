@@ -1,0 +1,87 @@
+{
+ "modo": "distribuido",
+ "pasta": "/tmp/friday-precortex-demo-4f8vm0tc",
+ "pid_hub": 3335,
+ "trabalhadores": {
+  "cognicao": {
+   "url": "http://127.0.0.1:44533",
+   "pid": 3336,
+   "neuronios": [
+    "hipoteses",
+    "percepcao",
+    "planejamento"
+   ]
+  },
+  "revisao": {
+   "url": "http://127.0.0.1:42799",
+   "pid": 3338,
+   "neuronios": [
+    "critica",
+    "verificador"
+   ]
+  }
+ },
+ "resultados": [
+  {
+   "verificacao": "objetivo 1 concluído",
+   "ok": true,
+   "detalhe": "concluido"
+  },
+  {
+   "verificacao": "a primeira estratégia falhou e a falha foi DETECTADA pela verificação independente",
+   "ok": true,
+   "detalhe": "[(1, 'anotar', 'falha_total'), (2, 'anotar_em_partes', 'sucesso')]"
+  },
+  {
+   "verificacao": "o plano foi revisado depois da experiência e a revisão funcionou",
+   "ok": true,
+   "detalhe": "[(1, 'anotar', 'falha_total'), (2, 'anotar_em_partes', 'sucesso')]"
+  },
+  {
+   "verificacao": "aprendizado registrado para cada tentativa (esperado × observado)",
+   "ok": true,
+   "detalhe": "['c0001', 'c0002']"
+  },
+  {
+   "verificacao": "as 12 perguntas têm resposta tirada do dossiê",
+   "ok": true,
+   "detalhe": "[]"
+  },
+  {
+   "verificacao": "objetivo 2 concluído",
+   "ok": true,
+   "detalhe": "concluido"
+  },
+  {
+   "verificacao": "a experiência mudou a escolha: o primeiro plano já usa a estratégia que funcionou",
+   "ok": true,
+   "detalhe": "[(1, 'anotar_em_partes', 'sucesso')]"
+  },
+  {
+   "verificacao": "o plano parou esperando a autorização do dono",
+   "ok": true,
+   "detalhe": "aguardando_autorizacao"
+  },
+  {
+   "verificacao": "nada foi enviado antes da autorização",
+   "ok": true,
+   "detalhe": "nenhuma chamada"
+  },
+  {
+   "verificacao": "neurônios responderam de OUTROS processos (comunicação entre processos de verdade)",
+   "ok": true,
+   "detalhe": "{'percepcao': [('cognicao', 3336)], 'planejamento': [('cognicao', 3336)], 'hipoteses': [('cognicao', 3336)], 'verificador': [('revisao', 3338)], 'critica': [('revisao', 3338)]}"
+  },
+  {
+   "verificacao": "os trabalhadores não carregaram o corretor, as tarefas nem o catálogo",
+   "ok": true,
+   "detalhe": "{'cognicao': {'corretor_carregado': False, 'tarefas_carregado': False, 'catalogo_carregado': False}, 'revisao': {'corretor_carregado': False, 'tarefas_carregado': False, 'catalogo_carregado': False}}"
+  },
+  {
+   "verificacao": "o dono negou e o objetivo ficou bloqueado sem executar",
+   "ok": true,
+   "detalhe": "bloqueado"
+  }
+ ],
+ "ok": true
+}

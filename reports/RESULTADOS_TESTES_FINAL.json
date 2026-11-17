@@ -1,0 +1,147 @@
+{
+ "formato": 1,
+ "projeto": "FRIDAY (friday-pi)",
+ "fase": "Fim das Fases 1 a 6 da missão de evolução (ramo evolucao-fase1)",
+ "data": "2026-10-24",
+ "observacao": "RESULTADOS_TESTES.json continua sendo a foto da auditoria (antes da evolução). Este arquivo é o resultado final dos testes A–J, com estados honestos.",
+ "ambiente_padrao": "Contêiner Linux (nuvem), Python 3.11/3.12/3.13 e ambiente limpo só com requirements-test.txt, Chromium/Playwright; sem Termux/Android, câmera, microfone, chave de IA ou internet ao vivo.",
+ "estados_permitidos": [
+  "APROVADO",
+  "APROVADO_COM_RESSALVAS",
+  "FALHOU",
+  "BLOQUEADO",
+  "NAO_EXECUTADO"
+ ],
+ "numeros": {
+  "unitarios": {
+   "linha_de_base": 717,
+   "fim_fase_1": 850,
+   "fim_fase_2": 1017,
+   "fim_fase_4": 1176,
+   "fim_fase_6": 1278,
+   "pulados": 1,
+   "versoes_python": [
+    "3.11",
+    "3.12",
+    "3.13",
+    "ambiente limpo (3.13)"
+   ]
+  },
+  "roteiros_chromium": {
+   "verificacoes": 163,
+   "falhas": 0,
+   "por_script": {
+    "hud": 61,
+    "voz_memoria": 21,
+    "cerebro": 38,
+    "maos": 29,
+    "prefrontal": 14
+   }
+  },
+  "mutacao": {
+   "verificacao": "25/25",
+   "tarefas_corretor_prefrontal": "51/51",
+   "experiencias_planejador": "41/41",
+   "objetivos": "39/40 (1 sobrevivente documentado: camada coberta pela seguinte)",
+   "coordenador": "37/37",
+   "retomada": "33/33 (+2 camadas redundantes marcadas)"
+  }
+ },
+ "testes": [
+  {
+   "id": "A",
+   "estado": "APROVADO",
+   "nome": "Execução básica verificada",
+   "onde": "tests/test_tarefas.py, tests/test_planejador.py; cenário A"
+  },
+  {
+   "id": "B",
+   "estado": "APROVADO",
+   "nome": "Falso sucesso não vira CONCLUIDA",
+   "onde": "tests/test_tarefas.py, tests/test_planejador.py, tests/test_tarefas_integracao.py; cenário B"
+  },
+  {
+   "id": "C",
+   "estado": "APROVADO",
+   "nome": "Falha + alternativa permitida, com experiência registrada",
+   "onde": "tests/test_planejador.py (test_C_...); cenário C"
+  },
+  {
+   "id": "D",
+   "estado": "APROVADO_COM_RESSALVAS",
+   "nome": "Retomada depois de interrupção",
+   "onde": "tests/test_retomada.py (Recuperar, QuedaReal); reports/evidencias/cenarios/fase5_6/necessidade_de_retomada.py",
+   "ressalva": "Queda simulada por exceção e exercitada com os._exit num processo Linux separado. Reinício e kill reais do Android/Termux NÃO foram exercitados."
+  },
+  {
+   "id": "E",
+   "estado": "APROVADO",
+   "nome": "Aprendizado muda a próxima estratégia, com justificativa conferível",
+   "onde": "tests/test_planejador.py (AprendizadoMudaAEscolha); cenário E"
+  },
+  {
+   "id": "F",
+   "estado": "APROVADO",
+   "nome": "Ação sensível não executa com confirmação ambígua (inclusive depois de reinício)",
+   "onde": "tests/test_tarefas.py, tests/test_retomada.py (test_F_...), tests/test_coordenador.py"
+  },
+  {
+   "id": "G",
+   "estado": "APROVADO",
+   "nome": "Privacidade da auditoria e dos registros",
+   "onde": "tests/test_tarefas.py, test_experiencias.py, test_objetivos.py, test_retomada.py, test_coordenador.py"
+  },
+  {
+   "id": "H",
+   "estado": "APROVADO",
+   "nome": "Metas relacionadas com texto diferente",
+   "onde": "tests/test_tarefas_metas.py"
+  },
+  {
+   "id": "I",
+   "estado": "APROVADO_COM_RESSALVAS",
+   "nome": "Concorrência e coordenação",
+   "onde": "tests/test_coordenador.py (test_I_...), tests/test_retomada.py (Coordenacao); necessidade_de_coordenacao.py (pico 2 -> 1 no mesmo recurso)",
+   "ressalva": "O coordenador só vê o que passa por tarefas.py (protocolos, autonomia e atalhos de voz da memória chamam o corretor direto) e é por processo."
+  },
+  {
+   "id": "J",
+   "estado": "APROVADO",
+   "nome": "Regressão",
+   "onde": "suíte inteira em 3 versões do Python + ambiente limpo + 5 roteiros no Chromium"
+  }
+ ],
+ "resumo_testes_A_a_J": {
+  "APROVADO": 8,
+  "APROVADO_COM_RESSALVAS": 2,
+  "FALHOU": 0,
+  "BLOQUEADO": 0,
+  "NAO_EXECUTADO": 0
+ },
+ "plataforma_e_infraestrutura": [
+  {
+   "id": "P1",
+   "estado": "NAO_EXECUTADO",
+   "nome": "Android + Termux reais (instalação, reinício, kill, wake lock, Termux:API, câmera, microfone)",
+   "motivo": "Sem aparelho nesta sessão. Só o dono pode validar."
+  },
+  {
+   "id": "P2",
+   "estado": "NAO_EXECUTADO",
+   "nome": "Qualidade de modelo de linguagem e de visão reais",
+   "motivo": "Os laços da nuvem e do Ollama são testados com respostas simuladas."
+  },
+  {
+   "id": "P3",
+   "estado": "NAO_EXECUTADO",
+   "nome": "Internet ao vivo",
+   "motivo": "O proxy desta sessão bloqueia hosts fora da lista; um teste antigo que chama api.open-meteo.com não depende disso para passar."
+  }
+ ],
+ "documentos": [
+  "FASE_1_ENTREGA.md",
+  "FASE_2_ENTREGA.md",
+  "FASE_3_4_ENTREGA.md",
+  "FASE_5_6_ENTREGA.md"
+ ]
+}

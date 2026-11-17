@@ -1,0 +1,8 @@
+Fase 2 — estado final medido em 24/10/2026 11:48 (Python do sistema: Python 3.13.17)
+unit py3.11: Ran 1017 tests in 59.565s OK (skipped=1) 
+unit py3.12: Ran 1017 tests in 59.902s OK (skipped=1) 
+unit py3.13: Ran 1017 tests in 52.035s OK (skipped=1) 
+unit venv limpo (requirements-test.txt): Ran 1017 tests in 53.768s OK (skipped=1) 
+e2e: hud 61, voz_memoria 21, cerebro 38, maos 29, prefrontal 14 verificações; falhas: 0
+mutação verificação: 25 de 25 mutantes detectados
+mutação tarefas+corretor+pré-córtex: 51 de 51 mutantes detectados

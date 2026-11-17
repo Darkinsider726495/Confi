@@ -1,0 +1,741 @@
+{
+ "mods": {
+  "anatomia": {
+   "linhas": 194,
+   "defs": 9,
+   "classes": 0,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Anatomia da FRIDAY: as estruturas do cérebro descritas na página da UFES (https://citogenetica.ufes.br/pt-br/c"
+  },
+  "android": {
+   "linhas": 190,
+   "defs": 22,
+   "classes": 0,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Ponte com o Android via Termux:API (apps Termux e Termux:API, ambos da F-Droid)."
+  },
+  "autonomia": {
+   "linhas": 480,
+   "defs": 29,
+   "classes": 0,
+   "imp": [
+    "broker",
+    "ferramentas",
+    "memoria",
+    "neuronios",
+    "protocolos",
+    "vida"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Autonomia da FRIDAY: ela aprende os seus hábitos, propõe rotinas e passa a fazê-las sozinha, e conta o que apr"
+  },
+  "broker": {
+   "linhas": 230,
+   "defs": 19,
+   "classes": 1,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Corretor de ferramentas (tool broker): o LLM PROPÕE, o corretor AUTORIZA."
+  },
+  "catalogo": {
+   "linhas": 116,
+   "defs": 4,
+   "classes": 0,
+   "imp": [
+    "android",
+    "broker",
+    "criar",
+    "ferramentas",
+    "internet",
+    "memoria",
+    "neuronios",
+    "protocolos",
+    "telemetria"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Catálogo: registra cada ferramenta no corretor com seu nível de risco."
+  },
+  "cerebro": {
+   "linhas": 276,
+   "defs": 12,
+   "classes": 0,
+   "imp": [
+    "broker",
+    "catalogo",
+    "conversa",
+    "curiosidade",
+    "ferramentas",
+    "memoria",
+    "telemetria"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Cérebro: IA na nuvem com ferramentas (via corretor); sem internet ou acima do limite diário, usa modelo local "
+  },
+  "conversa": {
+   "linhas": 525,
+   "defs": 30,
+   "classes": 0,
+   "imp": [
+    "cerebro",
+    "curiosidade",
+    "estado",
+    "ferramentas",
+    "memoria",
+    "vida",
+    "visao"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Conversa espontânea da FRIDAY: ela puxa assunto, faz perguntas para te conhecer, conta o que estudou e brinca "
+  },
+  "criar": {
+   "linhas": 47,
+   "defs": 5,
+   "classes": 0,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Criar arquivos: só dentro da pasta FRIDAY_DOCS (padrão ~/friday-docs), com nome simples, tipo permitido e tama"
+  },
+  "curiosidade": {
+   "linhas": 524,
+   "defs": 36,
+   "classes": 0,
+   "imp": [
+    "broker",
+    "cerebro",
+    "estado",
+    "ferramentas",
+    "internet",
+    "memoria",
+    "neuronios",
+    "vida"
+   ],
+   "lazy": [],
+   "threads": 1,
+   "pend": 0,
+   "doc": "Curiosidade da FRIDAY: ela estuda sozinha na internet nas horas livres (e quando você pede), guarda o que apre"
+  },
+  "diagnostico": {
+   "linhas": 109,
+   "defs": 5,
+   "classes": 0,
+   "imp": [
+    "android",
+    "broker",
+    "cerebro",
+    "ferramentas",
+    "internet"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Confere o ambiente e diz o que falta. Não imprime nenhum segredo: só ✔ / ✖ / •."
+  },
+  "estado": {
+   "linhas": 45,
+   "defs": 5,
+   "classes": 1,
+   "imp": [
+    "memoria"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Estado pequeno em JSON dentro do cofre (.cerebro/<nome>.json), para os módulos que precisam lembrar entre rein"
+  },
+  "ferramentas": {
+   "linhas": 346,
+   "defs": 34,
+   "classes": 0,
+   "imp": [
+    "android",
+    "telemetria"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Ações da FRIDAY. O LLM NÃO as chama direto: passam pelo corretor (broker.py), registradas em catalogo.py."
+  },
+  "internet": {
+   "linhas": 145,
+   "defs": 15,
+   "classes": 2,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Internet para a FRIDAY: pesquisar e ler páginas. TUDO o que volta daqui é dado de terceiros (externo=True no c"
+  },
+  "main": {
+   "linhas": 471,
+   "defs": 24,
+   "classes": 1,
+   "imp": [
+    "android",
+    "autonomia",
+    "broker",
+    "cerebro",
+    "conversa",
+    "curiosidade",
+    "diagnostico",
+    "ferramentas",
+    "maos",
+    "memoria",
+    "neuronios",
+    "prefrontal",
+    "protocolos",
+    "telemetria",
+    "vida",
+    "visao",
+    "voz",
+    "voz_remota"
+   ],
+   "lazy": [],
+   "threads": 11,
+   "pend": 0,
+   "doc": "FRIDAY — ponto de entrada."
+  },
+  "maos": {
+   "linhas": 198,
+   "defs": 11,
+   "classes": 0,
+   "imp": [
+    "memoria",
+    "prefrontal"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Mãos da FRIDAY: um sentido novo. A câmera acompanha as SUAS mãos dentro do navegador (MediaPipe) e você modela"
+  },
+  "memoria": {
+   "linhas": 641,
+   "defs": 37,
+   "classes": 0,
+   "imp": [
+    "broker"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Memória de longo prazo da FRIDAY em um cofre do Obsidian (uma pasta de arquivos Markdown que o app Obsidian ab"
+  },
+  "neuronios": {
+   "linhas": 1120,
+   "defs": 48,
+   "classes": 0,
+   "imp": [
+    "anatomia",
+    "broker",
+    "ferramentas",
+    "memoria",
+    "protocolos",
+    "vida",
+    "visao"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "O cérebro da FRIDAY no cofre do Obsidian: neurônios (notas) ligados por sinapses ([[links]]) que mudam com o u"
+  },
+  "nucleo": {
+   "linhas": 262,
+   "defs": 23,
+   "classes": 0,
+   "imp": [
+    "memoria",
+    "vida"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Núcleo da FRIDAY: a ARQUITETURA dela, inspirada em como o cérebro organiza o trabalho (e não no formato dele)."
+  },
+  "prefrontal": {
+   "linhas": 670,
+   "defs": 39,
+   "classes": 0,
+   "imp": [
+    "autonomia",
+    "conversa",
+    "curiosidade",
+    "estado",
+    "ferramentas",
+    "memoria",
+    "vida",
+    "visao"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Pré-córtex da FRIDAY: a camada que junta tudo o que ela quer, decide e acompanha as próprias metas."
+  },
+  "protocolos": {
+   "linhas": 110,
+   "defs": 9,
+   "classes": 0,
+   "imp": [
+    "broker",
+    "ferramentas",
+    "telemetria"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Protocolos: sequências nomeadas que você dispara falando (\"protocolo foco\", \"bom dia\") ou tocando no painel."
+  },
+  "simbiose": {
+   "linhas": 84,
+   "defs": 5,
+   "classes": 0,
+   "imp": [
+    "memoria",
+    "neuronios"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Resumo que o Claude Code lê ao abrir o projeto (hook SessionStart): o que a FRIDAY sabe, o que ela pediu e com"
+  },
+  "telemetria": {
+   "linhas": 172,
+   "defs": 12,
+   "classes": 0,
+   "imp": [
+    "android",
+    "broker",
+    "ferramentas"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Telemetria do painel, clima, briefing falado e relatório de sistemas."
+  },
+  "vida": {
+   "linhas": 562,
+   "defs": 37,
+   "classes": 0,
+   "imp": [
+    "broker",
+    "ferramentas",
+    "memoria",
+    "neuronios"
+   ],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Estado interno da FRIDAY: o que a faz parecer viva e não só obediente. É um MODELO simples e honesto, não sent"
+  },
+  "visao": {
+   "linhas": 949,
+   "defs": 67,
+   "classes": 0,
+   "imp": [
+    "broker",
+    "cerebro",
+    "curiosidade",
+    "estado",
+    "ferramentas",
+    "memoria",
+    "neuronios",
+    "vida"
+   ],
+   "lazy": [],
+   "threads": 1,
+   "pend": 0,
+   "doc": "Visão da FRIDAY (lobo occipital): ela enxerga e aprende com o que vê, até você construir um corpo para ela."
+  },
+  "voz": {
+   "linhas": 37,
+   "defs": 4,
+   "classes": 1,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Ouvido e voz, 100% locais: palavra de ativação (openWakeWord), fala->texto (faster-whisper), texto->fala (Pipe"
+  },
+  "voz_remota": {
+   "linhas": 82,
+   "defs": 10,
+   "classes": 0,
+   "imp": [],
+   "lazy": [],
+   "threads": 0,
+   "pend": 0,
+   "doc": "Cliente do servidor de voz privado (servidor/voz): ouvido (faster-whisper) e voz (Kokoro) no SEU servidor, sem"
+  }
+ },
+ "rev": {
+  "broker": [
+   "autonomia",
+   "catalogo",
+   "cerebro",
+   "curiosidade",
+   "diagnostico",
+   "main",
+   "memoria",
+   "neuronios",
+   "protocolos",
+   "telemetria",
+   "vida",
+   "visao"
+  ],
+  "ferramentas": [
+   "autonomia",
+   "catalogo",
+   "cerebro",
+   "conversa",
+   "curiosidade",
+   "diagnostico",
+   "main",
+   "neuronios",
+   "prefrontal",
+   "protocolos",
+   "telemetria",
+   "vida",
+   "visao"
+  ],
+  "memoria": [
+   "autonomia",
+   "catalogo",
+   "cerebro",
+   "conversa",
+   "curiosidade",
+   "estado",
+   "main",
+   "maos",
+   "neuronios",
+   "nucleo",
+   "prefrontal",
+   "simbiose",
+   "vida",
+   "visao"
+  ],
+  "neuronios": [
+   "autonomia",
+   "catalogo",
+   "curiosidade",
+   "main",
+   "simbiose",
+   "vida",
+   "visao"
+  ],
+  "protocolos": [
+   "autonomia",
+   "catalogo",
+   "main",
+   "neuronios"
+  ],
+  "vida": [
+   "autonomia",
+   "conversa",
+   "curiosidade",
+   "main",
+   "neuronios",
+   "nucleo",
+   "prefrontal",
+   "visao"
+  ],
+  "android": [
+   "catalogo",
+   "diagnostico",
+   "ferramentas",
+   "main",
+   "telemetria"
+  ],
+  "criar": [
+   "catalogo"
+  ],
+  "internet": [
+   "catalogo",
+   "curiosidade",
+   "diagnostico"
+  ],
+  "telemetria": [
+   "catalogo",
+   "cerebro",
+   "ferramentas",
+   "main",
+   "protocolos"
+  ],
+  "catalogo": [
+   "cerebro"
+  ],
+  "conversa": [
+   "cerebro",
+   "main",
+   "prefrontal"
+  ],
+  "curiosidade": [
+   "cerebro",
+   "conversa",
+   "main",
+   "prefrontal",
+   "visao"
+  ],
+  "cerebro": [
+   "conversa",
+   "curiosidade",
+   "diagnostico",
+   "main",
+   "visao"
+  ],
+  "estado": [
+   "conversa",
+   "curiosidade",
+   "prefrontal",
+   "visao"
+  ],
+  "visao": [
+   "conversa",
+   "main",
+   "neuronios",
+   "prefrontal"
+  ],
+  "autonomia": [
+   "main",
+   "prefrontal"
+  ],
+  "diagnostico": [
+   "main"
+  ],
+  "maos": [
+   "main"
+  ],
+  "prefrontal": [
+   "main",
+   "maos"
+  ],
+  "voz": [
+   "main"
+  ],
+  "voz_remota": [
+   "main"
+  ],
+  "anatomia": [
+   "neuronios"
+  ],
+  "main": [],
+  "nucleo": [],
+  "simbiose": []
+ },
+ "alcanca_main": [
+  "anatomia",
+  "android",
+  "autonomia",
+  "broker",
+  "catalogo",
+  "cerebro",
+  "conversa",
+  "criar",
+  "curiosidade",
+  "diagnostico",
+  "estado",
+  "ferramentas",
+  "internet",
+  "main",
+  "maos",
+  "memoria",
+  "neuronios",
+  "prefrontal",
+  "protocolos",
+  "telemetria",
+  "vida",
+  "visao",
+  "voz",
+  "voz_remota"
+ ],
+ "tests": {
+  "_ambiente.py": [],
+  "demo_cerebro.py": [
+   "catalogo",
+   "ferramentas",
+   "memoria",
+   "neuronios",
+   "visao"
+  ],
+  "demo_cerebro_video.py": [
+   "neuronios"
+  ],
+  "e2e_cerebro.py": [
+   "main",
+   "memoria",
+   "neuronios"
+  ],
+  "e2e_hud.py": [
+   "broker",
+   "main"
+  ],
+  "e2e_maos.py": [
+   "main",
+   "maos"
+  ],
+  "e2e_prefrontal.py": [
+   "main",
+   "prefrontal"
+  ],
+  "e2e_voz_memoria.py": [
+   "main"
+  ],
+  "test_anatomia.py": [
+   "anatomia",
+   "broker",
+   "catalogo",
+   "memoria",
+   "neuronios"
+  ],
+  "test_android.py": [
+   "android",
+   "broker",
+   "catalogo",
+   "ferramentas"
+  ],
+  "test_autonomia.py": [
+   "diagnostico"
+  ],
+  "test_conversa.py": [
+   "broker",
+   "catalogo",
+   "cerebro",
+   "conversa",
+   "curiosidade",
+   "ferramentas",
+   "main",
+   "memoria",
+   "vida"
+  ],
+  "test_core.py": [
+   "broker",
+   "cerebro",
+   "ferramentas"
+  ],
+  "test_curiosidade.py": [
+   "broker",
+   "catalogo",
+   "cerebro",
+   "curiosidade",
+   "ferramentas",
+   "internet",
+   "memoria",
+   "neuronios",
+   "vida"
+  ],
+  "test_docs.py": [],
+  "test_http.py": [
+   "broker",
+   "main"
+  ],
+  "test_internet.py": [
+   "broker",
+   "catalogo",
+   "criar",
+   "internet"
+  ],
+  "test_jarvis.py": [
+   "android",
+   "broker",
+   "catalogo",
+   "cerebro",
+   "ferramentas",
+   "main",
+   "protocolos",
+   "telemetria"
+  ],
+  "test_maos.py": [
+   "anatomia",
+   "broker",
+   "catalogo",
+   "main",
+   "maos",
+   "memoria",
+   "prefrontal"
+  ],
+  "test_memoria.py": [
+   "broker",
+   "catalogo",
+   "cerebro",
+   "ferramentas",
+   "main",
+   "memoria"
+  ],
+  "test_neuronios.py": [
+   "broker",
+   "catalogo",
+   "main",
+   "memoria",
+   "neuronios"
+  ],
+  "test_nunca_apaga.py": [
+   "broker",
+   "catalogo",
+   "memoria",
+   "neuronios"
+  ],
+  "test_prefrontal.py": [
+   "anatomia",
+   "broker",
+   "catalogo",
+   "curiosidade",
+   "main",
+   "memoria",
+   "prefrontal"
+  ],
+  "test_sem_botao_de_desligar.py": [
+   "broker",
+   "catalogo",
+   "main"
+  ],
+  "test_sinapses_sem_limite.py": [
+   "broker",
+   "catalogo",
+   "memoria",
+   "neuronios"
+  ],
+  "test_vida.py": [
+   "broker",
+   "catalogo",
+   "ferramentas",
+   "main",
+   "memoria",
+   "neuronios",
+   "vida"
+  ],
+  "test_visao.py": [
+   "anatomia",
+   "broker",
+   "catalogo",
+   "cerebro",
+   "curiosidade",
+   "ferramentas",
+   "main",
+   "memoria",
+   "neuronios",
+   "vida",
+   "visao"
+  ],
+  "test_voz.py": [
+   "android",
+   "broker",
+   "main",
+   "voz_remota"
+  ]
+ }
+}

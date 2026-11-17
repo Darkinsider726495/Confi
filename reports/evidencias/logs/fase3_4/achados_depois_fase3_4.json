@@ -1,0 +1,83 @@
+{
+  "data": "2026-10-24 14:06:42",
+  "achados": [
+    {
+      "n": 1,
+      "achado": "Ciclo objetivo → plano → execução → verificação → experiência incompleto",
+      "estado": "RESOLVIDO",
+      "evidencia": "o ciclo inteiro existe, inclusive o registro de experiências"
+    },
+    {
+      "n": 2,
+      "achado": "Registro estruturado de tarefas",
+      "estado": "RESOLVIDO",
+      "evidencia": "tarefa t0001 nasce em PRONTA com id, objetivo, passos, estado, histórico e contexto"
+    },
+    {
+      "n": 3,
+      "achado": "Verificação independente dos resultados das ferramentas",
+      "estado": "RESOLVIDO",
+      "evidencia": "ferramenta que mente terminou FALHOU; conferência: refutado (independente)"
+    },
+    {
+      "n": 4,
+      "achado": "Registro estruturado de experiências",
+      "estado": "RESOLVIDO",
+      "evidencia": "falso sucesso virou falha/falso_sucesso com hipótese, esperado × observado, 3 causas tipadas com confiança, reuso e o que se ignora; a próxima escolha já enxerga: 1 falha(s), p=0.3333. Limite: arquivo jsonl do processo, ainda não são neurônios do cofre"
+    },
+    {
+      "n": 5,
+      "achado": "Planejamento em várias etapas e replanejamento",
+      "estado": "PARCIALMENTE_CONFIRMADO",
+      "evidencia": "a 1ª estratégia falhou (guardar_memoria), o planejador trocou para «anotar» e concluiu com o efeito conferido; ciclo de 11 passos registrado. Limite: só os 3 tipos do catálogo viram plano sozinhos (pedido livre ainda não vira objetivo) e as alternativas são escritas em código"
+    },
+    {
+      "n": 6,
+      "achado": "Retomada de tarefas interrompidas",
+      "estado": "PARCIALMENTE_CONFIRMADO",
+      "evidencia": "o estado das tarefas sobrevive ao reinício e o dono pode reabrir uma (conferindo antes o efeito); nada retoma sozinho (Fase 6)"
+    },
+    {
+      "n": 7,
+      "achado": "Busca limitada a ~3.000 notas",
+      "estado": "RESOLVIDO",
+      "evidencia": "nota na posição 3.150 de 3.200 encontrada: ['Nota 03150']"
+    },
+    {
+      "n": 8,
+      "achado": "Progresso de metas depende de tema idêntico",
+      "estado": "RESOLVIDO",
+      "evidencia": "A (id da meta, outras palavras): progresso 1.0, cumprida, nota «cumprida em 24/10/2026 (evidência: pedido pela meta, estudo «singularidades»)»; B (literal da auditoria, sem relação): progresso 0.0, ativa, candidatos ['criptografia explicada'] — B não conclui de propósito: «parecer relacionado» não cumpre meta; o dono confirma com «conte … na meta …»"
+    },
+    {
+      "n": 9,
+      "achado": "Confirmações ambíguas de ação sensível",
+      "estado": "RESOLVIDO",
+      "evidencia": "nenhuma resposta vaga executa; «confirmo» sozinho executa? True"
+    },
+    {
+      "n": 10,
+      "achado": "Trechos de resultados em texto simples na auditoria",
+      "estado": "RESOLVIDO",
+      "evidencia": "resultado não aparece em claro na auditoria"
+    },
+    {
+      "n": 11,
+      "achado": "Normalização silenciosa de argumentos fora dos limites",
+      "estado": "RESOLVIDO",
+      "evidencia": "valores fora da faixa são recusados: «Pedido inválido: minutos deve estar entre 0.1 e 43200 (receb» / «Pedido inválido: minutos deve estar entre 1 e 1440 (recebi 0»"
+    },
+    {
+      "n": 12,
+      "achado": "Documentos desatualizados",
+      "estado": "RESOLVIDO",
+      "evidencia": "links e ordem de processar() conferem"
+    },
+    {
+      "n": 13,
+      "achado": "Conflito nucleo.py × main.py × simbiose.py",
+      "estado": "PARCIALMENTE_CONFIRMADO",
+      "evidencia": "nucleo.py importado por ninguém (órfão e em conflito com a decisão do dono); simbiose.py importado por ninguém, mas chamado pelo hook do Claude Code: True (não é conflito)"
+    }
+  ]
+}

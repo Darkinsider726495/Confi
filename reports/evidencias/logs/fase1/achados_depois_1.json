@@ -1,0 +1,83 @@
+{
+  "data": "2026-10-24 10:45:22",
+  "achados": [
+    {
+      "n": 1,
+      "achado": "Ciclo objetivo → plano → execução → verificação → experiência incompleto",
+      "estado": "CONFIRMADO",
+      "evidencia": "não há módulo de tarefas: o pedido não vira objeto com estado"
+    },
+    {
+      "n": 2,
+      "achado": "Registro estruturado de tarefas",
+      "estado": "CONFIRMADO",
+      "evidencia": "não há módulo de tarefas: o pedido não vira objeto com estado"
+    },
+    {
+      "n": 3,
+      "achado": "Verificação independente dos resultados das ferramentas",
+      "estado": "CONFIRMADO",
+      "evidencia": "o corretor devolveu «Feito com sucesso.» e registrou como sucesso; nada confere o efeito"
+    },
+    {
+      "n": 4,
+      "achado": "Registro estruturado de experiências",
+      "estado": "CONFIRMADO",
+      "evidencia": "não há registro de experiências (hipótese, esperado × observado, confiança)"
+    },
+    {
+      "n": 5,
+      "achado": "Planejamento em várias etapas e replanejamento",
+      "estado": "CONFIRMADO",
+      "evidencia": "PFC.plano() devolve um passo; não há plano de várias etapas nem replanejamento"
+    },
+    {
+      "n": 6,
+      "achado": "Retomada de tarefas interrompidas",
+      "estado": "CONFIRMADO",
+      "evidencia": "nenhuma tarefa persistida; só metas, rotinas e conversa voltam depois do reinício"
+    },
+    {
+      "n": 7,
+      "achado": "Busca limitada a ~3.000 notas",
+      "estado": "RESOLVIDO",
+      "evidencia": "nota na posição 3.150 de 3.200 encontrada: ['Nota 03150']"
+    },
+    {
+      "n": 8,
+      "achado": "Progresso de metas depende de tema idêntico",
+      "estado": "RESOLVIDO",
+      "evidencia": "A (id da meta, outras palavras): progresso 1.0, cumprida, nota «cumprida em 24/10/2026 (evidência: pedido pela meta, estudo «singularidades»)»; B (literal da auditoria, sem relação): progresso 0.0, ativa, candidatos ['criptografia explicada'] — B não conclui de propósito: «parecer relacionado» não cumpre meta; o dono confirma com «conte … na meta …»"
+    },
+    {
+      "n": 9,
+      "achado": "Confirmações ambíguas de ação sensível",
+      "estado": "RESOLVIDO",
+      "evidencia": "nenhuma resposta vaga executa; «confirmo» sozinho executa? True"
+    },
+    {
+      "n": 10,
+      "achado": "Trechos de resultados em texto simples na auditoria",
+      "estado": "RESOLVIDO",
+      "evidencia": "resultado não aparece em claro na auditoria"
+    },
+    {
+      "n": 11,
+      "achado": "Normalização silenciosa de argumentos fora dos limites",
+      "estado": "RESOLVIDO",
+      "evidencia": "valores fora da faixa são recusados: «Pedido inválido: minutos deve estar entre 0.1 e 43200 (receb» / «Pedido inválido: minutos deve estar entre 1 e 1440 (recebi 0»"
+    },
+    {
+      "n": 12,
+      "achado": "Documentos desatualizados",
+      "estado": "PARCIALMENTE_CONFIRMADO",
+      "evidencia": "pendente (1 de 4 verificações): nucleo.py cita docs/NUCLEO.md inexistente"
+    },
+    {
+      "n": 13,
+      "achado": "Conflito nucleo.py × main.py × simbiose.py",
+      "estado": "PARCIALMENTE_CONFIRMADO",
+      "evidencia": "nucleo.py importado por ninguém (órfão e em conflito com a decisão do dono); simbiose.py importado por ninguém, mas chamado pelo hook do Claude Code: True (não é conflito)"
+    }
+  ]
+}
