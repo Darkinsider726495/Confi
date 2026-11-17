@@ -37,11 +37,16 @@ O atualizador:
    ```
 Se aparecer `❌`, mande um print (o script nunca mostra a chave).
 
-## 3b. Rede neural própria (significado dos assuntos)
+## 3b. Rede neural (significado dos assuntos)
 ```bash
-pkg install python-numpy
-python scripts/treinar_significado.py --pretreino     # aprende com o cofre dela (alguns minutos)
+pkg install -y python-numpy tur-repo
+pkg install -y python-onnxruntime python-tokenizers            # o Transformer (o pip não tem onnxruntime para Android)
+mkdir -p modelos_ia
+unzip ~/storage/downloads/FRIDAY-modelo-significado.zip -d modelos_ia/
+python -c "import sys; sys.path.insert(0,'friday'); import significado as S; print(S.motor(), round(S.parecenca('sql','banco de dados'),2))"
 ```
+Esperado: `transformer 0.66`. Sem o zip do modelo, ela usa a rede própria (treine com `python scripts/treinar_significado.py --pretreino`).
+Se o `pkg` reclamar de `curl` («CANNOT LINK EXECUTABLE»), rode antes `apt update && apt full-upgrade -y`.
 Depois ela se reajusta sozinha a cada 6 h. Pergunte: «o que é parecido com treino?». Corrija: «treino não tem nada a ver com prova».
 
 ## 4. Conferir que está tudo certo (opcional, ~2 min)

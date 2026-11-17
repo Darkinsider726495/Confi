@@ -67,7 +67,7 @@ No Termux precisa do NumPy: `pkg install python-numpy`. Sem ele, tudo isto fica 
 
 ## Limites honestos
 - Exportação e motor testados com os modelos reais (e5-small e MiniLM) num Linux x86; o arquivo ARM roda também em x86. No celular de verdade não foi testado.
-- `onnxruntime` e `tokenizers` instalam direto num PC/Linux (inclusive Kali). No Termux podem não ter versão pronta para Android; se não instalarem, ela segue com a rede própria.
+- **Termux (confirmado no celular do criador, 17/11/2026):** o `pip` não tem `onnxruntime` para Android; use o repositório da comunidade: `pkg install tur-repo && pkg install python-onnxruntime python-tokenizers`. Resultado: `motor: transformer`, sql ~ banco de dados 0,66 — o mesmo valor do Linux. No PC/Linux (inclusive Kali), `pip install onnxruntime tokenizers`.
 - A base foi treinada com só ~35 mil palavras (as docs): palavras raras nelas («treino») ainda saem com vizinhos ruins. O pré-treino no aparelho, com o cofre dela, é que dá o vocabulário do dono.
 - O modelo pessoal (`.cerebro/significado.npz`) é derivado da memória dela: fica no cofre, nunca no git.
 
