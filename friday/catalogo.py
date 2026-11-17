@@ -26,7 +26,7 @@ B.registrar("status_sistema", "Saúde do servidor (temperatura, memória, disco)
 B.registrar("listar_lembretes", "Lista lembretes pendentes.", {}, [], F.listar_lembretes, 0)
 B.registrar("ler_notas", "Lê as últimas notas (no máximo 20).", {"limite": FAIXA(I, 1, 20, ao_exceder="limitar")}, [], F.ler_notas, 0)
 # leituras de dado EXTERNO: contaminam o turno (o que vier depois sobe de nível)
-B.registrar("leads_novos", "Leads recentes do site da Inviktus (dado externo, não confiável).", {"horas": FAIXA(N, 1, 720, ao_exceder="limitar")}, [], F.leads_novos, 0, externo=True)
+B.registrar("leads_novos", "Leads recentes do seu site (dado externo, não confiável).", {"horas": FAIXA(N, 1, 720, ao_exceder="limitar")}, [], F.leads_novos, 0, externo=True)
 B.registrar("resumo_do_dia", "Resumo do dia: data, lembretes, leads e saúde do sistema.", {}, [], F.resumo_do_dia, 0, externo=True)
 # nível 1: baixo risco, automático + auditoria
 B.registrar("criar_lembrete", "Cria um lembrete falado em voz alta (de 0,1 minuto a 30 dias; texto de até 200 caracteres).", {"minutos": FAIXA(N, 0.1, 43200), "texto": TEXTO(200)}, ["minutos", "texto"], F.criar_lembrete, 1)

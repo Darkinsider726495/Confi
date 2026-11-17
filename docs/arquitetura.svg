@@ -89,5 +89,5 @@
 <rect x="40" y="916" width="1420" height="96" rx="12" fill="#0d121b" stroke="#8a8e9b" stroke-width="1.5"/>
 <text x="56" y="942" fill="#8a8e9b" font-size="14" font-weight="700">Memória e dados</text>
 <text x="56" y="966" fill="#e8e6df" font-size="13">SQLite local (lembretes, notas, limite diário) · auditoria.jsonl · pasta friday-docs (arquivos que ela cria)</text>
-<text x="56" y="985" fill="#e8e6df" font-size="13">Supabase (leads do site da Inviktus, lido com chave service_role: guarde o .env com chmod 600)</text>
+<text x="56" y="985" fill="#e8e6df" font-size="13">Supabase (leads do seu site, lido com chave service_role: guarde o .env com chmod 600)</text>
 </svg>

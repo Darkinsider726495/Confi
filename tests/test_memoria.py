@@ -42,7 +42,7 @@ class Cofre(unittest.TestCase):
 
 class Guardar(Cofre):
     def test_cria_nota_com_frontmatter_tags_e_titulo(self):
-        r = MEM.guardar("Café", "Nikolas toma café sem açúcar", "preferencia", 4, "bebida")
+        r = MEM.guardar("Café", "Ana toma café sem açúcar", "preferencia", 4, "bebida")
         self.assertIn("Guardei", r)
         txt = (Path(self.dir) / "FRIDAY" / "Memorias" / "Café.md").read_text(encoding="utf-8")
         self.assertTrue(txt.startswith("---\n"))
@@ -107,7 +107,7 @@ class Guardar(Cofre):
         self.assertIn("importancia: 3", txt)
 
     def test_liga_memorias_relacionadas_com_wikilink(self):
-        MEM.guardar("Marcos", "Marcos é meu chefe na Inviktus", "pessoa")
+        MEM.guardar("Marcos", "Marcos é meu chefe na Acme", "pessoa")
         MEM.guardar("Reunião semanal", "Toda segunda falo com Marcos sobre os chamados", "tarefa")
         txt = (Path(self.dir) / "FRIDAY" / "Memorias" / "Reunião semanal.md").read_text(encoding="utf-8")
         self.assertIn("[[Marcos]]", txt)
@@ -135,7 +135,7 @@ class Guardar(Cofre):
 
 class Busca(Cofre):
     def test_acha_sem_depender_de_acento_ou_maiuscula(self):
-        MEM.guardar("Café", "Nikolas toma café sem açúcar", "preferencia")
+        MEM.guardar("Café", "Ana toma café sem açúcar", "preferencia")
         MEM.guardar("Gatos", "Tenho dois gatos chamados Tony e Pepper", "fato")
         r = MEM.buscar("CAFE sem acucar")
         self.assertEqual(r[0]["titulo"], "Café")
@@ -193,13 +193,13 @@ class Busca(Cofre):
 
 class Contexto(Cofre):
     def test_essencial_entra_sempre_mesmo_sem_relacao(self):
-        MEM.guardar("Alergia", "Nikolas é alérgico a amendoim", "fato", 5)
+        MEM.guardar("Alergia", "Ana é alérgico a amendoim", "fato", 5)
         c = MEM.contexto("que horas são")
         self.assertIn("[essencial] Alergia", c)
         self.assertIn("amendoim", c)
 
     def test_relevante_entra_e_irrelevante_nao(self):
-        MEM.guardar("Café", "Nikolas toma café sem açúcar", "preferencia")
+        MEM.guardar("Café", "Ana toma café sem açúcar", "preferencia")
         MEM.guardar("Gatos", "Tenho dois gatos chamados Tony e Pepper", "fato")
         c = MEM.contexto("quero um café")
         self.assertIn("café", c)
@@ -286,7 +286,7 @@ class Conversas(Cofre):
         self.assertEqual(f.stat().st_size, antes)
 
     def test_o_que_conversamos(self):
-        MEM.registrar_conversa("Quero revisar o orçamento da Inviktus", "Certo.")
+        MEM.registrar_conversa("Quero revisar o orçamento da Acme", "Certo.")
         self.assertIn("orçamento", MEM.conversa_do_dia("hoje"))
         self.assertIn("Não tenho conversas", MEM.conversa_do_dia("ontem"))
 
@@ -342,7 +342,7 @@ class Pedidos(Cofre):
         self.assertIsNone(B.PEND)
 
     def test_o_que_conversamos_hoje(self):
-        MEM.registrar_conversa("Revisar o contrato com a Inviktus", "Certo.")
+        MEM.registrar_conversa("Revisar o contrato com a Acme", "Certo.")
         self.assertIn("contrato", MAIN.processar("o que conversamos hoje?"))
 
     def test_conversa_comum_nao_e_interceptada(self):
@@ -376,7 +376,7 @@ class Cerebro(Cofre):
         self.addCleanup(p.stop)
 
     def test_memoria_vai_no_prompt_do_sistema(self):
-        MEM.guardar("Café", "Nikolas toma café sem açúcar", "preferencia")
+        MEM.guardar("Café", "Ana toma café sem açúcar", "preferencia")
         vistos = []
         with mock.patch("cerebro._nuvem", side_effect=lambda m, t, s=None: (vistos.append(s), "Sem açúcar, chefe.")[1]):
             C.responder("prepara um café pra mim")
@@ -420,7 +420,7 @@ class Cerebro(Cofre):
             self.assertEqual(C.responder("oi"), "Seguimos, chefe.")
 
     def test_modo_local_tambem_recebe_memoria(self):
-        MEM.guardar("Café", "Nikolas toma café sem açúcar", "preferencia")
+        MEM.guardar("Café", "Ana toma café sem açúcar", "preferencia")
         vistos = []
         with mock.patch.dict(os.environ, {"IA_MODO": "local"}), \
                 mock.patch("cerebro._local", side_effect=lambda h, t, turno=None, sistema=None: (vistos.append(sistema), "ok")[1]):

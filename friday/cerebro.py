@@ -1,5 +1,5 @@
 """Cérebro: IA na nuvem com ferramentas (via corretor); sem internet ou acima do limite diário, usa modelo local (Ollama)."""
-import os, json, time, requests
+import os, re, json, time, requests
 import broker as B
 import ferramentas as F
 import catalogo  # noqa: F401  (registra as ferramentas no corretor)
@@ -7,9 +7,16 @@ import telemetria as T
 import memoria as M
 import tarefas as TAR  # as ações que a IA propõe e MUDAM algo viram tarefa de um passo: o efeito é conferido (a decisão continua sendo do corretor)
 
+def _dono():
+    """Nome do dono (DONO_NOME no .env). Sem ele, o texto fica genérico: o mesmo código serve para qualquer pessoa."""
+    n = " ".join(str(os.getenv("DONO_NOME", "")).split())[:40]
+    return n if re.fullmatch(r"[\wÀ-ÿ' .-]+", n or "-") and n else ""
+
+
 def _system():
     t = F.tratamento()
-    return (f"Você é a FRIDAY, a inteligência artificial pessoal de Nikolas, no estilo das IAs do Homem de Ferro: serena, precisa, leal, "
+    dono = _dono()
+    return (f"Você é a FRIDAY, a inteligência artificial pessoal {('de ' + dono) if dono else 'do seu dono'}, no estilo das IAs do Homem de Ferro: serena, precisa, leal, "
             f"com humor seco e discreto. Trate-o por '{t}'. Você roda no celular dele (e em um servidor privado, quando houver). "
             "Fale em português do Brasil, em frases curtas feitas para serem faladas: sem listas, markdown ou emojis. "
             "Comece pelo que importa: o fato, o número, o resultado. Nada de 'claro!', 'com certeza!' nem elogios vazios. "

@@ -4,13 +4,13 @@ import os, sys, datetime as dt, random
 
 MEMORIAS = [
     # (título, texto, tipo, importância, tags)
-    ("Nikolas", "Nikolas trabalha com suporte N1 na Inviktus e estuda cibersegurança. Usa Python e SQL.", "pessoa", 5, "perfil"),
+    ("Ana", "Ana trabalha com suporte de TI na Acme e estuda cibersegurança. Usa Python e SQL.", "pessoa", 5, "perfil"),
     ("Tratamento", "Prefere ser chamado de chefe, com respostas curtas e diretas, estilo JARVIS.", "preferencia", 5, "voz"),
     ("Mãe", "Mãe é contato permitido para SMS e ligação. Gosta de receber aviso quando ele chega em casa.", "pessoa", 4, "familia"),
-    ("Sócio", "Sócio da Inviktus. Combina entregas e prazos do site com ele toda segunda.", "pessoa", 4, "inviktus"),
-    ("Inviktus", "Inviktus Tecnologias é a empresa dele. Tem site, leads no Supabase e domínio para renovar.", "projeto", 4, "inviktus"),
-    ("Site da Inviktus", "O site da Inviktus recebe leads que a FRIDAY avisa no painel. Hospedagem na Vercel.", "projeto", 3, "inviktus site"),
-    ("Domínio da Inviktus", "Renovar o domínio da Inviktus antes do vencimento e conferir o DNS.", "tarefa", 4, "inviktus dominio"),
+    ("Sócio", "Sócio da Acme. Combina entregas e prazos do site com ele toda segunda.", "pessoa", 4, "acme"),
+    ("Acme", "Acme Tecnologia é a empresa dela. Tem site, leads no Supabase e domínio para renovar.", "projeto", 4, "acme"),
+    ("Site da Acme", "O site da Acme recebe leads que a FRIDAY avisa no painel. Hospedagem na Vercel.", "projeto", 3, "acme site"),
+    ("Domínio da Acme", "Renovar o domínio da Acme antes do vencimento e conferir o DNS.", "tarefa", 4, "acme dominio"),
     ("FRIDAY no Android", "A FRIDAY roda no celular via Termux, com painel HUD e notificações. Supervisor reinicia se travar.", "projeto", 5, "friday celular"),
     ("Servidor de retaguarda", "Servidor em casa com Docker: Ollama, ntfy, Kuma, AdGuard e backup. Acesso só pelo Tailscale.", "projeto", 4, "servidor"),
     ("Tailscale", "Decidiu usar Tailscale para falar com o servidor. Nunca expor portas na internet.", "decisao", 5, "servidor seguranca"),
@@ -29,8 +29,8 @@ MEMORIAS = [
     ("Termux", "Usa Termux e Termux:API da F-Droid, não da Play Store. Wake-lock ligado para a FRIDAY não dormir.", "fato", 3, "celular"),
     ("Python e SQL", "Escreve em Python e SQL no dia a dia. Prefere código simples, com testes.", "fato", 3, "codigo"),
     ("Modo foco", "No modo foco ela só notifica, sem falar. Entre 22h e 7h também.", "preferencia", 3, "rotina voz"),
-    ("Leads do site", "Quando chega lead novo no site, avisar no painel e perguntar se quer responder.", "preferencia", 3, "inviktus site"),
-    ("Supabase", "Projeto do Supabase guarda os leads. Plano grátis pausa por inatividade: manter um keepalive.", "fato", 3, "inviktus"),
+    ("Leads do site", "Quando chega lead novo no site, avisar no painel e perguntar se quer responder.", "preferencia", 3, "acme site"),
+    ("Supabase", "Projeto do Supabase guarda os leads. Plano grátis pausa por inatividade: manter um keepalive.", "fato", 3, "acme"),
     ("Ntfy", "Push privado pelo ntfy do servidor, acesso negado para anônimos, com token.", "fato", 3, "servidor"),
     ("Portfólio", "Montar portfólio de cibersegurança com laboratórios e relatórios curtos.", "tarefa", 2, "estudo seguranca"),
     ("Kokoro em português", "Testar o Kokoro em português do Brasil: vozes pm_alex, pf_dora e pm_santa.", "tarefa", 2, "voz"),
@@ -40,14 +40,14 @@ MEMORIAS = [
 CONVERSAS = [
     (9, "08:10", "bom dia, faz o briefing", "Bom dia, chefe. Tempo bom, sem lembretes."),
     (9, "21:40", "como está o backup do servidor?", "O backup rodou ontem às três, sem erros, chefe."),
-    (8, "09:05", "preciso renovar o domínio da Inviktus", "Anotei. Quer que eu lembre na sexta?"),
+    (8, "09:05", "preciso renovar o domínio da Acme", "Anotei. Quer que eu lembre na sexta?"),
     (8, "22:15", "o servidor ficou lento hoje", "A memória do servidor estava em oitenta por cento. Já normalizou."),
     (7, "08:20", "bom dia, tem lead novo no site?", "Dois leads novos desde ontem, chefe."),
     (7, "20:30", "quero testar a voz privada no servidor", "O servidor de voz está configurado. Faço um teste de ida e volta?"),
     (6, "12:00", "confere o backup do servidor de novo", "Backup íntegro, a última cópia tem sete horas."),
     (6, "23:05", "vou estudar segurança agora", "Boa. Ativo o modo foco até meia-noite."),
     (5, "08:15", "briefing da manhã", "Bom dia, chefe. Três lembretes e um lead."),
-    (5, "19:50", "o domínio da Inviktus vence quando?", "Não tenho a data. Quer que eu anote quando você conferir?"),
+    (5, "19:50", "o domínio da Acme vence quando?", "Não tenho a data. Quer que eu anote quando você conferir?"),
     (4, "10:30", "fala sobre o obsidian e a memória", "Minha memória é este cofre: cada nota é um neurônio."),
     (4, "21:10", "o servidor está com a voz privada rodando?", "Está, chefe. O ouvido e a voz respondem em menos de dois segundos."),
     (3, "08:00", "bom dia, como está o servidor?", "Servidor saudável. Backup em dia."),
@@ -61,10 +61,10 @@ CONVERSAS = [
 # o que ela "lembra" junto, várias vezes (isso é o que fortalece as sinapses)
 RECORDACOES = [
     "conferir o backup do servidor", "backup do servidor na retaguarda", "servidor tailscale seguranca", "voz privada no servidor",
-    "voz masculina grave e kokoro", "domínio e site da Inviktus", "leads do site da Inviktus", "inviktus domínio renovar",
+    "voz masculina grave e kokoro", "domínio e site da Acme", "leads do site da Acme", "acme domínio renovar",
     "obsidian memoria neuronios", "cérebro 3D neuronios obsidian", "claude code evolução da friday", "corretor de segurança e auditoria",
     "estudo de segurança security", "briefing da manhã e café", "modo foco e voz", "ollama local e nuvem",
-    "backup do servidor", "voz privada kokoro", "obsidian memoria", "inviktus leads site",
+    "backup do servidor", "voz privada kokoro", "obsidian memoria", "acme leads site",
 ]
 
 # o que o olho dela anotou nesses dias (só texto: nenhuma foto é guardada) → neurônios no lobo occipital
@@ -99,7 +99,7 @@ def criar(raiz, semente=7):
         VIS.guardar(cena, coisas, "demonstração", agora=hoje - dt.timedelta(days=dias))
         VIS._ligar(coisas)               # coisas vistas juntas acendem juntas
     N.pedir_evolucao("Quero que ela leia a minha agenda do Google e avise de reuniões, mas ainda não tenho essa ferramenta.", "Ler agenda do Google")
-    N.pedir_evolucao("Saber quanto falta para o vencimento do domínio da Inviktus consultando o registro.", "Vencimento do domínio")
+    N.pedir_evolucao("Saber quanto falta para o vencimento do domínio da Acme consultando o registro.", "Vencimento do domínio")
     N._e["v"] = None
     N.autoconhecer()                     # ela sempre soube quem é; os tópicos nascem na consolidação
     for q in RECORDACOES * 2:            # lembrar muda as sinapses

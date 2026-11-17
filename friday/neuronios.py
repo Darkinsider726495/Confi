@@ -624,7 +624,7 @@ def _notas_eu():
         "Registro também as minhas primeiras vezes. Diga «não puxe assunto» para eu parar e «pode puxar assunto» para voltar.\n\n"
         f"Parte de [[{HUB}]]. Veja também [[Vida e humor]].\n")
     categorias = sorted(c for c in por_cat)
-    n[HUB] = ("# FRIDAY (eu)\n\nSou a FRIDAY, a inteligência pessoal do Nikolas. Rodo no celular, com retaguarda opcional no servidor dele.\n\n## Minhas partes\n"
+    n[HUB] = ("# FRIDAY (eu)\n\nSou a FRIDAY, a inteligência pessoal " + (("de " + " ".join(os.getenv("DONO_NOME", "").split())[:40]) if os.getenv("DONO_NOME", "").strip() else "do meu dono") + ". Rodo no celular, com retaguarda opcional num servidor.\n\n## Minhas partes\n"
               + "\n".join(f"- [[{c}]]" for c in categorias)
               + "\n- [[Protocolos]]\n- [[Regras de segurança]]\n- [[Memória e cérebro]]\n- [[Regiões do cérebro]]\n- [[Vida e humor]]\n- [[Autonomia e rotinas]]\n- [[Pedidos de evolução]]\n- [[Voz e sentidos]]\n- [[Curiosidade e estudo]]\n- [[Visão e lobo occipital]]\n- [[Conversa e brincadeiras]]\n")
     return {t: _eu_nota(c) for t, c in n.items()}
