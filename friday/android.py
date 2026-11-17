@@ -86,6 +86,9 @@ def dizer(texto, silencioso=False):
             except ValueError:
                 pass
         # canal de MÍDIA por padrão: o padrão do termux-tts-speak é o de notificação, que fica mudo com o celular no silencioso/vibrar
+        motor = os.getenv("TTS_MOTOR", "").strip()           # outro motor de voz instalado no Android (veja: termux-tts-engines)
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+", motor):
+            a += ["-e", motor]
         canal = os.getenv("TTS_CANAL", "MUSIC").strip().upper()
         if canal in ("MUSIC", "NOTIFICATION", "ALARM", "RING", "SYSTEM", "VOICE_CALL"):
             a += ["-s", canal]

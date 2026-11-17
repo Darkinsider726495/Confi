@@ -49,6 +49,14 @@ class Adaptador(unittest.TestCase):
             A.dizer("oi")
         self.assertNotIn("-s ALARM; RM", E.ler_log(LOG))                     # canal fora da lista é ignorado
 
+    def test_motor_de_voz_escolhido_pelo_dono(self):
+        with mock.patch.dict(os.environ, {"TTS_MOTOR": "com.k2fsa.sherpa.onnx.tts.engine"}):
+            A.dizer("oi")
+        self.assertIn("-e com.k2fsa.sherpa.onnx.tts.engine", E.ler_log(LOG))
+        with mock.patch.dict(os.environ, {"TTS_MOTOR": "x; rm -rf /"}):
+            A.dizer("oi")
+        self.assertNotIn("rm -rf", E.ler_log(LOG).replace("STDIN olá; rm -rf", ""))
+
     def test_silencioso_vira_notificacao(self):
         A.dizer("bom dia", silencioso=True)
         log = E.ler_log(LOG)
