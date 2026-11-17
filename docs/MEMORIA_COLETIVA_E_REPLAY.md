@@ -17,7 +17,11 @@ As conexões são evidência de roteamento observado, não uma alegação de cau
 
 ## Persistência e reconstrução
 
-O índice agregado é salvo atomicamente em `memoria_coletiva.json`. Se o índice não existir, é reconstruído a partir do `eventos.jsonl` disponível no armazém. No arranque de workers locais, o hub reenvia uma janela curta de oito eventos seguros por neurônio. No modo distribuído, `atualizar_saude()` detecta um PID novo e reenvia a janela ao worker que voltou.
+O índice agregado é salvo atomicamente em `memoria_coletiva.json`. Se o índice não existir, é reconstruído a partir do `eventos.jsonl` disponível no armazém. No arranque de workers locais, o hub reenvia os **oito eventos seguros mais recentes do log** (no total, não por neurônio) a cada neurônio do worker. No modo distribuído, `atualizar_saude()` detecta um PID novo e reenvia a janela ao worker que voltou.
+
+Cada evento leva o `seq` (só o número de ordem do log, sem conteúdo). O neurônio guarda os últimos 256 `seq` vistos e ignora um evento repetido, então o mesmo evento chegando ao vivo e pelo replay — ou um replay interrompido e refeito — entra uma vez só no contexto.
+
+O estado de trabalho por objetivo (`ultimos`, `ultimo_neuronio`: qual foi o último evento e o último neurônio de cada objetivo) guarda só os **2000 objetivos mais recentes** (`max_objetivos`), para o JSON não crescer sem fim no celular. As contagens de tipos, transições e conexões — o que foi aprendido — não são cortadas.
 
 O replay usa o contrato `precortex/1` e mensagens `tipo="evento"`; não entra na fila de objetivos nem altera a execução de pedidos.
 
