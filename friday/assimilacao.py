@@ -188,6 +188,11 @@ def _laco():
                     SIG.ajustar(epocas=10)
             except Exception:
                 pass
+            try:
+                import rotina as ROT
+                ROT.treinar_se_for_hora()                        # GRU da rotina: retreina uma vez por dia com o registro de atividades
+            except Exception:
+                pass
             continue
         try:
             assimilar(origem, texto, t)

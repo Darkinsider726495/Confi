@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import rotina as ROT  # GRU (rede recorrente) que aprende a rotina do dono pelo registro de atividades e prevê a próxima hora
 import significado as SIG  # rede neural própria (significado dos assuntos), treinada em 3 etapas: pré-treino, sinapses, feedback do dono
 import lembrancas as LB  # conversas profundas viram a ESSÊNCIA (escrita pela LLM), nunca a transcrição
 import assimilacao as ASS  # pré-córtex = registro; cada informação nova vira sinapse e o bruto vai embora (nunca vai para o disco)
@@ -190,6 +191,8 @@ def processar(t):
             r = SIG.tratar(t)  # «o que é parecido com X?», «X tem / não tem nada a ver com Y» (feedback para a rede)
         if r is None:
             r = LB.tratar(t)  # «do que você lembra sobre X?», «quais suas lembranças?», «esqueça a lembrança sobre X»
+        if r is None:
+            r = ROT.tratar(t)  # «como é a minha rotina?», «o que você acha que eu vou fazer agora?» (GRU; só prevê, não executa)
         if r is None:
             r = ASS.tratar(t)  # «o que você percebeu?»: padrões que ela assimilou sozinha
         if r is None:

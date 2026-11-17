@@ -271,6 +271,14 @@ def preparar_lembranca(agora=None, rng=None):
     Retomar uma conversa profunda (não delicada) tem a vez em metade das ocasiões; senão, o par de assuntos mais forte."""
     rng = rng or RNG
     try:
+        import rotina as ROT
+        r = ROT.sugestao(agora)                       # a GRU acha que, nesta hora, você costuma falar de X: ela se adianta (1x por dia)
+        t = time.time() if agora is None else agora
+        if r and t - _e().get("lembradas", {}).get("R:" + r["chave"], 0) > 20 * 3600 and fala_ok(r["texto"]):
+            return {"texto": r["texto"], "chave": "R:" + r["chave"]}
+    except Exception:
+        pass
+    try:
         import lembrancas as LB
         l = LB.para_retomar(agora, _e().get("lembradas", {}))
     except Exception:
