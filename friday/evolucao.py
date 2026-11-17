@@ -267,6 +267,17 @@ def _copiar_staging(destino: Path) -> Path:
     return staged
 
 
+def _arquivar(caminho: Path, motivo: str) -> Path | None:
+    """Regra «nada é apagado»: em vez de remover, MOVE o arquivo para .evolucao/arquivo/ (recuperável)."""
+    if not caminho.exists() and not caminho.is_symlink():
+        return None
+    destino_dir = STATE_DIR / "arquivo"
+    destino_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    destino = destino_dir / f"{time.time_ns()}-{motivo}-{caminho.name}"
+    os.replace(caminho, destino)
+    return destino
+
+
 def _escrever_atomico(destino: Path, dados: bytes, modo: int | None = None) -> None:
     fd, nome = tempfile.mkstemp(prefix=f".{destino.name}.", suffix=".tmp", dir=str(destino.parent))
     tmp = Path(nome)
@@ -287,8 +298,11 @@ def _escrever_atomico(destino: Path, dados: bytes, modo: int | None = None) -> N
         except OSError:
             pass
     finally:
-        if tmp.exists():
-            tmp.unlink()
+        if tmp.exists():          # só sobra se a escrita falhou: vai para o arquivo, não para o lixo
+            try:
+                _arquivar(tmp, "tmp-falho")
+            except OSError:
+                pass
 
 
 def _criar_backup(alvo: Path, original: bytes, relativo: str, original_existe: bool = True) -> Path:
@@ -385,7 +399,7 @@ def promover(relativo: str, conteudo: str, comandos_teste, timeout: int = TEST_T
             if original_existe:
                 _escrever_atomico(alvo, original, modo)
             else:
-                alvo.unlink(missing_ok=True)
+                _arquivar(alvo, "rollback")      # módulo novo que falhou: sai de friday/ mas fica recuperável
             _registro({"evento": "rollback_automatico", "alvo": relativo, "antes": _hash(original),
                        "original_existe": original_existe, "candidato": _hash(novo),
                        "backup": str(backup.relative_to(BASE)), "testes_pos_promocao": pos_results})
@@ -406,7 +420,7 @@ def promover(relativo: str, conteudo: str, comandos_teste, timeout: int = TEST_T
                 if atual != original:
                     _escrever_atomico(alvo, original, modo)
             elif alvo.exists():
-                alvo.unlink()
+                _arquivar(alvo, "rollback")
         finally:
             _registro({"evento": "erro_promocao", "alvo": relativo, "erro": type(exc).__name__,
                        "original_existe": original_existe, "backup": str(backup.relative_to(BASE))})

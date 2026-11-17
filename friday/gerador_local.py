@@ -81,6 +81,14 @@ def preparar_arquivo(alvo: str, arquivo_candidato: str | Path, descricao: str = 
     return _guardar(alvo, conteudo, descricao or f"Candidato importado de {origem.name}")
 
 
+def preparar_texto(alvo: str, conteudo: str, descricao: str = "") -> dict:
+    """Enfileira código recebido como texto (ex.: pela API local), sem arquivo temporário e sem executá-lo."""
+    E._alvo(alvo)
+    if not isinstance(conteudo, str):
+        raise TypeError("O código candidato precisa ser texto.")
+    return _guardar(alvo, conteudo, descricao or "Candidato recebido pela API local")
+
+
 def gerar_substituicao(alvo: str, busca: str, substituicao: str, descricao: str = "") -> dict:
     """Gera um candidato por substituição literal que deve ocorrer exatamente uma vez."""
     if not isinstance(busca, str) or not busca:

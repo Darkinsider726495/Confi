@@ -10,9 +10,7 @@ import hmac
 import json
 import os
 import secrets
-import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Any
 
 from . import gerador_local, evolucao
@@ -123,7 +121,6 @@ class _Handler(BaseHTTPRequestHandler):
         if self.path != "/v1/candidates":
             self._send(404, {"error": "not_found"})
             return
-        temp_path = None
         try:
             data = self._body()
             target = data.get("target")
@@ -134,12 +131,8 @@ class _Handler(BaseHTTPRequestHandler):
             if not isinstance(description, str):
                 raise ValueError("'description' precisa ser texto.")
             evolucao._alvo(target)
-            with tempfile.NamedTemporaryFile(
-                mode="w", encoding="utf-8", suffix=".py", prefix="friday-candidate-", delete=False
-            ) as temp:
-                temp.write(code)
-                temp_path = temp.name
-            candidate = gerador_local.preparar_arquivo(target, temp_path, description)
+            # o texto vai direto para a fila: sem arquivo temporário para criar e depois apagar
+            candidate = gerador_local.preparar_texto(target, code, description)
             self._send(201, {
                 "accepted": True,
                 "candidate": candidate,
@@ -151,12 +144,6 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(400, {"error": str(exc)})
         except Exception:
             self._send(500, {"error": "internal_error"})
-        finally:
-            if temp_path:
-                try:
-                    Path(temp_path).unlink(missing_ok=True)
-                except OSError:
-                    pass
 
     def do_PUT(self) -> None:
         self._send(405, {"error": "method_not_allowed", "note": "Promoção não é permitida por HTTP."})

@@ -177,6 +177,22 @@ class ProjetoTemporario(unittest.TestCase):
         backup = self.root / r["backup"]
         self.assertTrue(backup.exists())
         self.assertEqual(backup.read_bytes(), b"")
+        # «nada é apagado»: o módulo revertido sai de friday/ mas fica recuperável em .evolucao/arquivo/
+        arquivados = list((self.state / "arquivo").glob("*-rollback-demo.py"))
+        self.assertEqual(len(arquivados), 1)
+        self.assertEqual(arquivados[0].read_text(encoding="utf-8"), "def valor():\n    return 7\n")
+
+    def test_escrita_atomica_que_falha_arquiva_o_tmp_em_vez_de_apagar(self):
+        alvo = self.friday / "memoria.py"
+        antes = alvo.read_bytes()
+        with patch.object(E.os, "replace", side_effect=[OSError("disco cheio"), None]) as rep, \
+             patch("os.unlink") as unlink, patch("os.remove") as remove:
+            with self.assertRaises(OSError):
+                E._escrever_atomico(alvo, b"novo")
+        unlink.assert_not_called(); remove.assert_not_called()
+        self.assertEqual(rep.call_count, 2)                      # 1ª: a troca (falhou); 2ª: o arquivamento do .tmp
+        self.assertEqual(rep.call_args_list[1].args[1].parent, self.state / "arquivo")
+        self.assertEqual(alvo.read_bytes(), antes)              # o arquivo ativo não foi tocado
 
     def test_sem_mudanca_nao_promove(self):
         r = E.promover("friday/memoria.py", self.fonte(), self.cmd)
