@@ -102,3 +102,37 @@ def test_cerebro_groq_exige_chave(monkeypatch):
         except RuntimeError as exc:
             assert "GROQ_API_KEY" in str(exc)
         groq.assert_not_called()
+
+
+class Resp400(Response):
+    status_code = 400
+
+
+def test_modelo_que_raciocina_pede_pouco_raciocinio_escondido_e_folga(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "segredo-de-teste")
+    session = Mock()
+    session.post.return_value = Response({"choices": [{"message": {"role": "assistant", "content": "conectada."}}]})
+    G.chat_completion([{"role": "user", "content": "oi"}], model="openai/gpt-oss-120b", max_tokens=40, session=session)
+    corpo = session.post.call_args.kwargs["json"]
+    assert corpo["reasoning_effort"] == "low" and corpo["include_reasoning"] is False
+    assert corpo["max_tokens"] == 40 + G.RACIOCINIO_FOLGA          # senão os 40 tokens vão todos para o raciocínio e a resposta vem vazia
+
+
+def test_modelo_comum_nao_recebe_opcoes_de_raciocinio(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "segredo-de-teste")
+    session = Mock()
+    session.post.return_value = Response({"choices": [{"message": {"role": "assistant", "content": "oi"}}]})
+    G.chat_completion([{"role": "user", "content": "oi"}], model="llama-3.3-70b-versatile", max_tokens=40, session=session)
+    corpo = session.post.call_args.kwargs["json"]
+    assert "reasoning_effort" not in corpo and "reasoning_format" not in corpo and corpo["max_tokens"] == 40
+
+
+def test_se_a_groq_recusar_as_opcoes_tenta_de_novo_sem_elas(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "segredo-de-teste")
+    session = Mock()
+    session.post.side_effect = [Resp400({}), Response({"choices": [{"message": {"role": "assistant", "content": "oi"}}]})]
+    r = G.chat_completion([{"role": "user", "content": "oi"}], model="qwen/qwen3-32b", session=session)
+    assert r["choices"][0]["message"]["content"] == "oi"
+    assert session.post.call_count == 2
+    assert "reasoning_format" in session.post.call_args_list[0].kwargs["json"]
+    assert "reasoning_format" not in session.post.call_args_list[1].kwargs["json"]

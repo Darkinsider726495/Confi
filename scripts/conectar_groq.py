@@ -46,7 +46,8 @@ def gravar(env, valores):
         pass
 
 
-PREFERIDOS = ("llama-3.3-70b", "llama-4", "gpt-oss-120b", "qwen", "llama-3.1-70b", "gpt-oss", "llama")   # do melhor para conversar ao mais simples
+# do melhor para conversar ao mais simples; os que respondem direto (sem «pensar» antes) vêm primeiro: são mais rápidos para ela
+PREFERIDOS = ("llama-3.3-70b", "llama-4-maverick", "kimi-k2", "llama-4", "gpt-oss-120b", "qwen", "llama-3.1-70b", "gpt-oss", "llama")
 
 
 def escolher_modelo(chave, buscar=None):
@@ -77,7 +78,7 @@ def testar():
         pass
     from provedor_groq import responder, GroqError
     try:
-        r = responder([{"role": "user", "content": "Responda só: conectada."}], sistema="Você é a FRIDAY. Responda em português do Brasil.", max_tokens=10)
+        r = responder([{"role": "user", "content": "Responda só: conectada."}], sistema="Você é a FRIDAY. Responda em português do Brasil.", max_tokens=40)
     except GroqError as e:
         return False, str(e)
     except Exception as e:                              # rede fora, DNS etc.: mensagem sem a chave

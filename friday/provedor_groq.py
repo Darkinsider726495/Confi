@@ -15,6 +15,19 @@ API_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 
+RACIOCINIO_FOLGA = 600
+
+
+def _extras_raciocinio(modelo: str) -> dict[str, Any]:
+    """Opções para modelos que raciocinam antes de responder (cada família aceita parâmetros diferentes na Groq)."""
+    m = (modelo or "").lower()
+    if "gpt-oss" in m:
+        return {"reasoning_effort": "low", "include_reasoning": False}
+    if "qwen3" in m or "qwq" in m or "deepseek-r1" in m or "reasoning" in m:
+        return {"reasoning_format": "hidden"}
+    return {}
+
+
 class GroqError(RuntimeError):
     """Erro de configuração ou resposta da API Groq."""
 
@@ -60,12 +73,19 @@ def chat_completion(
     if system:
         payload_messages.append({"role": "system", "content": system})
     payload_messages.extend(messages)
+    modelo = model or os.getenv("GROQ_MODEL", DEFAULT_MODEL)
     payload: dict[str, Any] = {
-        "model": model or os.getenv("GROQ_MODEL", DEFAULT_MODEL),
+        "model": modelo,
         "messages": payload_messages,
         "max_tokens": max(1, min(int(max_tokens), 8192)),
         "temperature": float(os.getenv("GROQ_TEMPERATURE", "0.3")),
     }
+    extras = _extras_raciocinio(modelo)
+    if extras:
+        # modelo que «pensa» antes de responder: pouco raciocínio, escondido, e folga de tokens — senão uma resposta curta
+        # (ex.: os assuntos da assimilação, 40 tokens) volta VAZIA, porque o orçamento todo foi gasto pensando.
+        payload.update(extras)
+        payload["max_tokens"] = min(8192, payload["max_tokens"] + RACIOCINIO_FOLGA)
     converted = _tools_openai(tools)
     if converted:
         payload["tools"] = converted
@@ -77,6 +97,14 @@ def chat_completion(
             json=payload,
             timeout=timeout,
         )
+        if extras and getattr(response, "status_code", 200) == 400:
+            simples = {k: v for k, v in payload.items() if k not in extras}   # a Groq recusou as opções de raciocínio: uma vez sem elas
+            response = session.post(
+                os.getenv("GROQ_API_URL", API_URL),
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json=simples,
+                timeout=timeout,
+            )
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as exc:
