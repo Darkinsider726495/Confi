@@ -46,6 +46,28 @@ def gravar(env, valores):
         pass
 
 
+PREFERIDOS = ("llama-3.3-70b", "llama-4", "gpt-oss-120b", "qwen", "llama-3.1-70b", "gpt-oss", "llama")   # do melhor para conversar ao mais simples
+
+
+def escolher_modelo(chave, buscar=None):
+    """Pergunta à Groq quais modelos a conta tem e escolhe o melhor para conversar. Devolve o id ou None. Nunca imprime a chave."""
+    import requests
+    buscar = buscar or (lambda: requests.get("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {chave}"}, timeout=20))
+    try:
+        r = buscar()
+        if r.status_code != 200:
+            return None
+        ids = [m.get("id", "") for m in r.json().get("data", []) if m.get("active", True)]
+    except Exception:
+        return None
+    texto = [i for i in ids if not any(x in i for x in ("whisper", "guard", "tts", "playai", "embed", "vision"))]
+    for pref in PREFERIDOS:
+        for i in sorted(texto, reverse=True):
+            if pref in i:
+                return i
+    return texto[0] if texto else None
+
+
 def testar():
     sys.path.insert(0, str(ROOT / "friday"))
     try:
@@ -72,6 +94,13 @@ def main(argv=None, entrada=getpass.getpass, env=None):
     gravar(env, {"IA_PROVEDOR": "groq", "GROQ_API_KEY": chave})
     print(f"Chave {mascarar(chave)} gravada no .env (só você lê o arquivo). Testando a conexão…")
     ok, msg = testar()
+    if not ok and "404" in msg:                     # 404 = o modelo configurado não existe mais na Groq (a chave está certa)
+        modelo = escolher_modelo(chave)
+        if modelo:
+            print(f"O modelo antigo não existe mais na Groq. Trocando para «{modelo}» e testando de novo…")
+            gravar(env, {"GROQ_MODEL": modelo})
+            os.environ["GROQ_MODEL"] = modelo
+            ok, msg = testar()
     if ok:
         print(f"✅ Conectada! A Groq respondeu: {msg}\nReinicie a FRIDAY para ela passar a usar o modelo grande.")
         return 0

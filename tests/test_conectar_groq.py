@@ -64,5 +64,32 @@ class Conectar(unittest.TestCase):
         self.assertNotIn(CHAVE, saida)
 
 
+class ModeloAposentado(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.env = Path(self.dir.name) / ".env"
+        self.addCleanup(self.dir.cleanup)
+
+    def resposta(self, ids, status=200):
+        r = mock.Mock(status_code=status)
+        r.json.return_value = {"data": [{"id": i, "active": True} for i in ids]}
+        return lambda: r
+
+    def test_escolhe_o_melhor_modelo_de_conversa_da_conta(self):
+        ids = ["whisper-large-v3", "llama-guard-4-12b", "llama-3.1-8b-instant", "openai/gpt-oss-120b", "meta-llama/llama-4-maverick-17b-128e-instruct"]
+        self.assertEqual(CG.escolher_modelo("x", self.resposta(ids)), "meta-llama/llama-4-maverick-17b-128e-instruct")
+        self.assertIsNone(CG.escolher_modelo("x", self.resposta([], 401)))
+
+    def test_404_troca_o_modelo_no_env_e_testa_de_novo(self):
+        out = io.StringIO()
+        testes = iter([(False, "Falha na chamada à Groq (HTTP 404)"), (True, "conectada.")])
+        with redirect_stdout(out), mock.patch.object(CG, "testar", side_effect=lambda: next(testes)), \
+             mock.patch.object(CG, "escolher_modelo", return_value="llama-4-novo"), mock.patch.dict(os.environ, {}):
+            code = CG.main(entrada=lambda _p: CHAVE, env=self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("GROQ_MODEL=llama-4-novo", self.env.read_text(encoding="utf-8"))
+        self.assertNotIn(CHAVE, out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
