@@ -21,6 +21,8 @@ _insights = []                               # padrões percebidos nesta execuç
 _falar = {"f": None}
 _ini = {"feito": False}
 _trava = threading.RLock()
+AJUSTE_A_CADA_S = 6 * 3600                  # a rede de significado reajusta com as sinapses e o feedback a cada 6 h (no tempo ocioso)
+_ajuste = {"t": time.time()}
 CONTEXTO_S = 300                             # informação a menos de 5 min da anterior se liga a ela
 INSTRUCAO = ("Liste os assuntos centrais do texto: de 1 a 5, cada um com 1 a 3 palavras, substantivos, em minúsculas, separados por vírgula. "
              "Não inclua nomes de pessoas, números, senhas, endereços nem dados pessoais. Responda só a lista.")
@@ -150,6 +152,11 @@ def assimilar(origem, texto, t=None):
     ids = titulos[:3] + contexto[:1]                            # disparar liga até 4 de uma vez
     N.disparar([{"origem": "Topicos", "titulo": x} for x in ids])
     try:
+        import significado as SIG
+        SIG.ligar_por_significado(titulos)                      # rede neural própria: liga ao que já conhece de parecido (sinapse semântica)
+    except Exception:
+        pass
+    try:
         import prefrontal as PFC
         PFC.anotar_assimilacao(origem, titulos, t)
     except Exception:
@@ -167,6 +174,13 @@ def _laco():
             try:
                 import lembrancas as LB
                 LB.fechar_se_parada()                            # conversa parada há 10 min: se foi profunda, vira lembrança
+            except Exception:
+                pass
+            try:
+                if time.time() - _ajuste["t"] > AJUSTE_A_CADA_S:   # etapa 2/3 da rede de significado, sozinha, no tempo ocioso
+                    _ajuste["t"] = time.time()
+                    import significado as SIG
+                    SIG.ajustar(epocas=10)
             except Exception:
                 pass
             continue

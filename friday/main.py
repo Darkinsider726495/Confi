@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import significado as SIG  # rede neural própria (significado dos assuntos), treinada em 3 etapas: pré-treino, sinapses, feedback do dono
 import lembrancas as LB  # conversas profundas viram a ESSÊNCIA (escrita pela LLM), nunca a transcrição
 import assimilacao as ASS  # pré-córtex = registro; cada informação nova vira sinapse e o bruto vai embora (nunca vai para o disco)
 import tarefas as TAR
@@ -185,6 +186,8 @@ def processar(t):
             r = MAOS.tratar(t)  # "como uso as mãos?", "meus modelos 3d"
         if r is None:
             r = PFC.tratar(t)  # pré-córtex: "o que você decidiu?", "quais são as suas metas?", "tenha como meta aprender sobre...", "no que você está focada?" (responde pelo foco, com o que assimilou do núcleo)
+        if r is None:
+            r = SIG.tratar(t)  # «o que é parecido com X?», «X tem / não tem nada a ver com Y» (feedback para a rede)
         if r is None:
             r = LB.tratar(t)  # «do que você lembra sobre X?», «quais suas lembranças?», «esqueça a lembrança sobre X»
         if r is None:

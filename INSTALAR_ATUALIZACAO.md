@@ -37,6 +37,13 @@ O atualizador:
    ```
 Se aparecer `❌`, mande um print (o script nunca mostra a chave).
 
+## 3b. Rede neural própria (significado dos assuntos)
+```bash
+pkg install python-numpy
+python scripts/treinar_significado.py --pretreino     # aprende com o cofre dela (alguns minutos)
+```
+Depois ela se reajusta sozinha a cada 6 h. Pergunte: «o que é parecido com treino?». Corrija: «treino não tem nada a ver com prova».
+
 ## 4. Conferir que está tudo certo (opcional, ~2 min)
 ```bash
 python -m compileall -q friday
