@@ -325,6 +325,18 @@ class HUD(http.server.BaseHTTPRequestHandler):
                 return self._json({"ok": True, "modelos": MAOS.modelos()})
             vs = MAOS.carregar(urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("nome", [""])[0])
             return self._json({"ok": True, "voxels": vs}) if vs else self._json({"ok": False, "msg": "modelo não encontrado"}, 404)
+        if p == "/mente/dados":  # números reais das camadas da mente (só leitura, com a chave)
+            if not self._auth():
+                return self._json({"ok": False, "msg": "sem chave"}, 401)
+            import mente as MENTE
+            return self._json(MENTE.resumo())
+        if p == "/mente":  # a mente dela em 3D (visual): a página só confere o host; os dados que ela lê exigem a chave
+            with open(os.path.join(BASE, "mente.html"), "rb") as f:
+                b = f.read()
+            self.send_response(200)
+            self._cabecalhos("text/html; charset=utf-8", len(b))
+            self.end_headers()
+            return self.wfile.write(b)
         if p == "/rede":  # rede neural em camadas (visual): a página só confere o host; os dados que ela lê exigem a chave
             with open(os.path.join(BASE, "rede.html"), "rb") as f:
                 b = f.read()
