@@ -145,7 +145,8 @@ class Fila(Base):
 
     def test_main_registra_cada_fala_e_liga_a_assimilacao_na_partida(self):
         import main as MAIN
-        src = open(MAIN.__file__, encoding="utf-8").read()
+        from pathlib import Path as _P
+        src = _P(MAIN.__file__).read_text(encoding="utf-8")
         self.assertIn('ASS.registrar("fala", t)', src)
         self.assertIn("ASS.iniciar(", src)
         self.assertIn("ASS.tratar(t)", src)

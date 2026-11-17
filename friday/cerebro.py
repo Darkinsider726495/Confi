@@ -162,6 +162,13 @@ def _memoria_completa(texto):
         except Exception:
             pass
         try:
+            import lembrancas as LB
+            lemb = LB.contexto(texto)                     # conversas profundas anteriores sobre este assunto: continuidade
+            if lemb:
+                bloco = (bloco + "\n" + lemb).strip()
+        except Exception:
+            pass
+        try:
             import conversa as CONV
             pergunta = CONV.contexto()
             if pergunta:

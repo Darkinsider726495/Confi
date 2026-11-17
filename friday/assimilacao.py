@@ -134,8 +134,14 @@ def assimilar(origem, texto, t=None):
         return []
     t = time.time() if t is None else t
     assuntos = extrair(texto)
-    del texto                                                   # o bruto acaba aqui
     titulos = [x for x in (_neuronio(a, origem) for a in assuntos) if x]
+    if origem == "fala":
+        try:
+            import lembrancas as LB
+            LB.acompanhar(texto, titulos, t)                    # conversa em andamento (só RAM): se for profunda, vira a essência no fim
+        except Exception:
+            pass
+    del texto                                                   # o bruto acaba aqui
     if not titulos:
         return []
     with _trava:
@@ -155,7 +161,15 @@ def assimilar(origem, texto, t=None):
 
 def _laco():
     while True:
-        origem, texto, t = _FILA.get()
+        try:
+            origem, texto, t = _FILA.get(timeout=60)
+        except queue.Empty:
+            try:
+                import lembrancas as LB
+                LB.fechar_se_parada()                            # conversa parada há 10 min: se foi profunda, vira lembrança
+            except Exception:
+                pass
+            continue
         try:
             assimilar(origem, texto, t)
         except Exception:

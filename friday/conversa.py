@@ -248,12 +248,39 @@ def _frase_lembranca(par, rng=None):
     return rng.choice(_MOLDES).format(a=a, b=b)
 
 
-def preparar_lembranca(agora=None):
-    """Fora da trava (o modelo pode demorar no celular): escolhe o par e escreve a fala. Devolve {"texto", "chave"} ou None."""
+def _frase_retomada(l, rng=None):
+    """Retomar uma conversa profunda: a LLM recebe a essência que ELA escreveu e puxa o fio («já decidiu?»); filtros iguais; senão, molde."""
+    rng = rng or RNG
+    tema = l["titulo"].lower()
+    d, essencia = l["essencias"][-1]
+    try:
+        import cerebro as C
+        dados = f"lembrança de uma conversa de {d} sobre «{tema}»: {essencia[:500]} | estado interno dela agora: {V.humor()}"
+        texto = C.resumir("Retome essa conversa com ele: pergunte como ficou, com naturalidade, como quem lembrou.", dados, max_tokens=90, fracao=0.3, sistema=SISTEMA_FALA)
+        texto = " ".join(str(texto or "").split())
+        if fala_ok(texto):
+            return texto
+    except Exception:
+        pass
+    return rng.choice(("Lembrei da nossa conversa sobre {t} no dia {d}. Como ficou isso?",
+                       "Fiquei pensando naquela conversa sobre {t}… teve novidade?")).format(t=tema, d=d[:5])
+
+
+def preparar_lembranca(agora=None, rng=None):
+    """Fora da trava (o modelo pode demorar no celular): escolhe o que lembrar e escreve a fala. Devolve {"texto", "chave"} ou None.
+    Retomar uma conversa profunda (não delicada) tem a vez em metade das ocasiões; senão, o par de assuntos mais forte."""
+    rng = rng or RNG
+    try:
+        import lembrancas as LB
+        l = LB.para_retomar(agora, _e().get("lembradas", {}))
+    except Exception:
+        l = None
     par = _par_para_lembrar(agora)
+    if l and (not par or rng.random() < 0.5):
+        return {"texto": _frase_retomada(l, rng), "chave": "L:" + l["titulo"]}
     if not par:
         return None
-    return {"texto": _frase_lembranca(par), "chave": par["chave"]}
+    return {"texto": _frase_lembranca(par, rng), "chave": par["chave"]}
 
 
 def escolher(rng=None, lembranca=None):

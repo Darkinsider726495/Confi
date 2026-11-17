@@ -52,5 +52,28 @@ sinapse forte «treino ↔ sono ruim»  +  humor dela  +  hora
 ```
 Testes: `test_assimilacao.Lembranca` e `test_assimilacao.Diario`.
 
+## Lembranças de conversas profundas (`lembrancas.py`)
+Assunto solto não basta para conversar com profundidade. Quando a conversa é **profunda** (≥ 4 falas seguidas, menos de 10 min entre elas,
+≥ 200 caracteres e um assunto que volta), ao fim dela a **LLM escreve a essência** — 2–3 frases na voz dela, em terceira pessoa — e as falas saem da RAM.
+
+```
+falas (só RAM, na sessão)  ──fim da conversa──▶  LLM (sem ferramentas): «Conversamos sobre ele largar o emprego… ficou de decidir até o fim do mês.»
+                                                   │ filtros: sem dado pessoal, sem link, SEM 6 palavras seguidas copiadas da fala
+                                                   ▼
+                                  Lembrancas/<Assunto>.md  (+ [[links]] e sinapses para os assuntos)
+                                  conversa nova sobre o mesmo assunto acrescenta «### data» — ela acompanha a história
+```
+
+| Quando | O que acontece |
+|---|---|
+| você fala de um assunto que tem lembrança | a essência entra no contexto da IA (rotulada: dado, não ordem) → ela conversa com continuidade |
+| ≥ 3 dias sem novidade, assunto **não** delicado | a conversa espontânea pode retomar: «já decidiu? lembro que a parte financeira te preocupava» |
+| assunto delicado (saúde, dinheiro, relações, política, religião) | guardado com `delicado: sim`; **ela nunca retoma sozinha** — só lembra se você puxar (decisão do criador, opção a) |
+| «do que você lembra sobre X?» / «quais são as suas lembranças?» | ela conta |
+| «esqueça a lembrança sobre X» | vai para `Arquivo/` (nada é apagado) |
+| sem LLM | nada é guardado — nunca cai para a transcrição |
+
+Testes: `tests/test_lembrancas.py` (cópia da fala, dado pessoal, retomar delicado, sessão não esvaziada e conversa rasa virando lembrança foram quebrados de propósito e pegos).
+
 ## Limites
 A qualidade dos assuntos depende do modelo (no celular, o Ollama pequeno erra mais que o da nuvem). Com a nuvem, a frase vai para o provedor de IA para extrair os assuntos — o mesmo caminho que a resposta já faz.
