@@ -101,7 +101,7 @@ def fazer(agora=None):
     tmp = a.with_suffix(".tmp")
     tmp.write_text(json.dumps({"t": agora, "arq": str(nome), "n": n}), encoding="utf-8")
     os.replace(tmp, a)
-    return f"Fiz a cópia de segurança do meu cérebro: {n} arquivos, em {nome.parent}. Guarde uma cópia fora do celular."
+    return f"Fiz a cópia de segurança do meu cérebro: {n} arquivos, {'na pasta Downloads' if 'download' in str(nome.parent).lower() else 'em ' + str(nome.parent)}. Guarde uma cópia fora do celular."
 
 
 def dias():
