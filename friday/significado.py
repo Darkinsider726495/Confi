@@ -180,7 +180,10 @@ def _transformer():
     if np is None or not os.path.isfile(os.path.join(d, "model.onnx")):
         return None
     try:
-        import onnxruntime as ort
+        import warnings
+        with warnings.catch_warnings():                          # no Termux o onnxruntime avisa «Unsupported platform (android)», mas roda (testado)
+            warnings.simplefilter("ignore", UserWarning)
+            import onnxruntime as ort
         from tokenizers import Tokenizer
         opc = ort.SessionOptions()
         opc.intra_op_num_threads = max(1, min(4, os.cpu_count() or 1))
