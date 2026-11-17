@@ -9,9 +9,10 @@ Gera modelos_ia/significado-transformer/ com:
   model.onnx      o Transformer, quantizado em 8 bits (~4× menor, roda no CPU do celular)
   tokenizer.json  o tokenizador
   meta.json       o modelo de origem, o prefixo e o LIMIAR calibrado (quanto «parecido» é parecido de verdade para ESTE modelo)
+Funciona sozinho (não precisa do resto do projeto): no Colab, basta enviar este arquivo.
 Copie a pasta para friday-pi/modelos_ia/ no aparelho. A FRIDAY passa a usar o Transformer sozinha; sem a pasta, usa a rede própria.
 """
-import argparse, json, os, shutil, sys
+import argparse, json, os, shutil
 
 # palavras comuns em português para calibrar: pares aleatórios entre elas mostram quanto «parecido» o modelo dá ao acaso
 CALIBRAR = ("casa carro comida trabalho escola prova estudo treino academia sono música filme série livro viagem praia chuva sol frio calor "
@@ -25,7 +26,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--modelo", default="intfloat/multilingual-e5-small")
     ap.add_argument("--prefixo", default="query: ", help="e5 usa «query: »; MiniLM/sentence-transformers usam vazio")
-    ap.add_argument("--saida", default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "modelos_ia", "significado-transformer"))
+    ap.add_argument("--saida", default=os.path.join("modelos_ia", "significado-transformer"))
     ap.add_argument("--sem-quantizar", action="store_true")
     a = ap.parse_args()
     try:
@@ -51,24 +52,31 @@ def main():
     shutil.rmtree(tmp, ignore_errors=True)
 
     print("3/4 calibrando o limiar com pares aleatórios de palavras comuns…")
-    os.environ["SIGNIFICADO_TRANSFORMER"] = a.saida
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "friday"))
-    with open(os.path.join(a.saida, "meta.json"), "w", encoding="utf-8") as f:
-        json.dump({"modelo": a.modelo, "prefixo": a.prefixo}, f)
     import numpy as np
-    import significado as S
-    V = np.stack([S._base_transformer(w) for w in CALIBRAR])
+    import onnxruntime as ort
+    from tokenizers import Tokenizer
+    sess = ort.InferenceSession(os.path.join(a.saida, "model.onnx"), providers=["CPUExecutionProvider"])
+    tok = Tokenizer.from_file(os.path.join(a.saida, "tokenizer.json"))
+    nomes = {i.name for i in sess.get_inputs()}
+
+    def vetor(t):                                   # o mesmo cálculo que a FRIDAY faz (significado._base_transformer)
+        e = tok.encode(a.prefixo + t.lower())
+        ids, mask = np.array([e.ids], dtype=np.int64), np.array([e.attention_mask], dtype=np.int64)
+        ent = {"input_ids": ids, "attention_mask": mask, "token_type_ids": np.zeros_like(ids)}
+        h = sess.run(None, {k: v for k, v in ent.items() if k in nomes})[0][0]
+        v = (h * mask[0][:, None]).sum(0) / mask.sum()
+        return v / np.linalg.norm(v)
+
+    V = np.stack([vetor(w) for w in CALIBRAR])
     sims = (V @ V.T)[np.triu_indices(len(V), 1)]
-    limiar = float(np.quantile(sims, 0.99))
-    meta = {"modelo": a.modelo, "prefixo": a.prefixo, "dim": int(V.shape[1]), "limiar": round(limiar, 3),
+    meta = {"modelo": a.modelo, "prefixo": a.prefixo, "dim": int(V.shape[1]), "limiar": round(float(np.quantile(sims, 0.99)), 3),
             "acaso_media": round(float(sims.mean()), 3), "quantizado": not a.sem_quantizar}
     with open(os.path.join(a.saida, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=1)
     tam = os.path.getsize(os.path.join(a.saida, "model.onnx")) / 1e6
     print(f"4/4 pronto: {a.saida}  ({tam:.0f} MB, {meta['dim']} dimensões, limiar calibrado {meta['limiar']}, acaso ≈ {meta['acaso_media']})")
-    S._tr.update(dir=None)
     for x, y in (("treino", "academia"), ("prova", "estudo"), ("treino", "banco")):
-        print(f"   {x} ~ {y}: {float(S._base_transformer(x) @ S._base_transformer(y)):.2f}")
+        print(f"   {x} ~ {y}: {float(vetor(x) @ vetor(y)):.2f}")
     return 0
 
 
