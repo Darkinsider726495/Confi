@@ -35,6 +35,9 @@ class MemoriaColetiva:
         self.pasta = pasta
         self.max_transicoes = max(100, int(max_transicoes))
         self._lock = threading.RLock()
+        # serializa as gravações (gravador de fundo × flush explícito): os dois usam o mesmo .tmp; sem isto
+        # um truncaria o arquivo enquanto o outro o move para o lugar. Separado de _lock para não travar o registro.
+        self._gravando = threading.Lock()
         self._tipos = Counter()
         self._transicoes = Counter()
         self._conexoes = Counter()
@@ -43,6 +46,7 @@ class MemoriaColetiva:
         self._seq = 0
         self._historico = deque(maxlen=256)
         self.erros = 0
+        self.ultimo_erro = ""
         self._suja = False
         self._parar = threading.Event()
         self._despertar = threading.Event()
@@ -149,26 +153,28 @@ class MemoriaColetiva:
         """Grava o índice em lote; não é chamado no caminho síncrono de cada evento."""
         if not self.pasta:
             return True
-        with self._lock:
-            if not self._suja:
+        with self._gravando:
+            with self._lock:
+                if not self._suja:
+                    return True
+                d = self._snapshot()
+            tmp = self._arquivo() + ".tmp"
+            try:
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(d, f, ensure_ascii=False, sort_keys=True)
+                    f.flush(); os.fsync(f.fileno())
+                os.replace(tmp, self._arquivo())
+                with self._lock:
+                    if self._seq == d["seq"]:
+                        self._suja = False
                 return True
-            d = self._snapshot()
-        tmp = self._arquivo() + ".tmp"
-        try:
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(d, f, ensure_ascii=False, sort_keys=True)
-                f.flush(); os.fsync(f.fileno())
-            os.replace(tmp, self._arquivo())
-            with self._lock:
-                if self._seq == d["seq"]:
-                    self._suja = False
-            return True
-        except OSError:
-            with self._lock:
-                self.erros += 1
-            try: os.unlink(tmp)
-            except OSError: pass
-            return False
+            except OSError as e:
+                # Nada é apagado (regra «nunca apague», como em armazem.py): o .tmp incompleto fica onde está e é
+                # sobrescrito na próxima gravação; o índice válido continua sendo o último os.replace bem-sucedido.
+                with self._lock:
+                    self.erros += 1
+                    self.ultimo_erro = f"{type(e).__name__}: {e}"[:200]
+                return False
 
     def _laco_gravacao(self):
         while not self._parar.is_set():

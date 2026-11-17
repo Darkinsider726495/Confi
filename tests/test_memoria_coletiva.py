@@ -85,6 +85,47 @@ class MemoriaColetivaTest(unittest.TestCase):
             finally:
                 h.encerrar()
 
+    def test_falha_na_gravacao_nao_apaga_nada_e_preserva_o_indice(self):
+        """Regra «nunca apague»: se gravar falhar, o índice anterior continua válido e nenhum arquivo some."""
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d:
+            m = MemoriaColetiva(d)
+            m.registrar({"seq": 1, "objetivo": "pc0001", "tipo": "fase_iniciada"})
+            self.assertTrue(m.flush())
+            arq = os.path.join(d, "memoria_coletiva.json")
+            with open(arq, encoding="utf-8") as f:
+                antes = f.read()
+            m.registrar({"seq": 2, "objetivo": "pc0001", "tipo": "fase_concluida"})
+            with mock.patch("pre_cortex.memoria_coletiva.os.replace", side_effect=OSError("disco cheio")), \
+                 mock.patch("os.unlink") as unlink, mock.patch("os.remove") as remove:
+                self.assertFalse(m.flush())
+            unlink.assert_not_called(); remove.assert_not_called()
+            self.assertGreaterEqual(m.erros, 1)   # o gravador de fundo também pode ter tentado durante a falha
+            self.assertIn("disco cheio", m.ultimo_erro)
+            with open(arq, encoding="utf-8") as f:
+                self.assertEqual(f.read(), antes)
+            self.assertTrue(m.flush())          # a próxima gravação sobrescreve o .tmp e conclui
+            self.assertEqual(json.load(open(arq, encoding="utf-8"))["tipos"]["fase_concluida"], 1)
+            m.encerrar()
+
+    def test_gravacoes_concorrentes_nao_corrompem_o_indice(self):
+        """Gravador de fundo + flush explícito de várias threads: o arquivo final é JSON válido e completo."""
+        import threading
+        with tempfile.TemporaryDirectory() as d:
+            m = MemoriaColetiva(d)
+            def trabalho(base):
+                for i in range(50):
+                    m.registrar({"seq": base + i, "objetivo": f"pc{base}", "tipo": "fase_concluida"})
+                    m.flush()
+            ts = [threading.Thread(target=trabalho, args=(k * 1000,)) for k in range(4)]
+            for t in ts: t.start()
+            for t in ts: t.join()
+            self.assertTrue(m.flush())
+            self.assertEqual(m.erros, 0)
+            with open(os.path.join(d, "memoria_coletiva.json"), encoding="utf-8") as f:
+                self.assertEqual(json.load(f)["tipos"]["fase_concluida"], 200)
+            m.encerrar()
+
     def test_recarrega_agregados(self):
         with tempfile.TemporaryDirectory() as d:
             m = MemoriaColetiva(d); m.registrar({"seq": 4, "objetivo": "pc0002", "tipo": "recuperado"})
