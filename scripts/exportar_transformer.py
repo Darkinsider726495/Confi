@@ -4,6 +4,8 @@
     pip install "optimum[onnxruntime]" transformers
     python scripts/exportar_transformer.py                         # padrão: intfloat/multilingual-e5-small
     python scripts/exportar_transformer.py --modelo sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 --prefixo ""
+    python scripts/exportar_transformer.py --de-pasta ~/Downloads/e5 --saida modelos_ia/significado-transformer       # PC: já baixados
+    python scripts/exportar_transformer.py --de-pasta ~/Downloads/e5 --saida modelos_ia/celular                       # cópia 8 bits p/ celular
 
 Gera modelos_ia/significado-transformer/ com:
   model.onnx      o Transformer, quantizado em 8 bits (~4× menor, roda no CPU do celular)
@@ -28,18 +30,28 @@ def main():
     ap.add_argument("--prefixo", default="query: ", help="e5 usa «query: »; MiniLM/sentence-transformers usam vazio")
     ap.add_argument("--saida", default=os.path.join("modelos_ia", "significado-transformer"))
     ap.add_argument("--sem-quantizar", action="store_true")
+    ap.add_argument("--de-pasta", help="usar model.onnx + tokenizer.json JÁ BAIXADOS do Hugging Face (pasta onnx/ do modelo): "
+                                       "não precisa de optimum nem transformers, só onnxruntime, tokenizers, onnx e numpy")
     a = ap.parse_args()
-    try:
-        from optimum.onnxruntime import ORTModelForFeatureExtraction
-        from transformers import AutoTokenizer
-    except ImportError:
-        print('Instale antes:  pip install "optimum[onnxruntime]" transformers')
-        return 1
-    tmp = a.saida + "-tmp"
-    shutil.rmtree(tmp, ignore_errors=True)
-    print(f"1/4 baixando e exportando {a.modelo} para ONNX…")
-    ORTModelForFeatureExtraction.from_pretrained(a.modelo, export=True).save_pretrained(tmp)
-    AutoTokenizer.from_pretrained(a.modelo).save_pretrained(tmp)
+    if a.de_pasta:
+        tmp = a.de_pasta
+        for f in ("model.onnx", "tokenizer.json"):
+            if not os.path.isfile(os.path.join(tmp, f)):
+                print(f"Falta {f} em {tmp}. Baixe da pasta onnx/ do modelo no Hugging Face.")
+                return 1
+        print(f"1/4 usando os arquivos já baixados em {tmp}")
+    else:
+        try:
+            from optimum.onnxruntime import ORTModelForFeatureExtraction
+            from transformers import AutoTokenizer
+        except ImportError:
+            print('Instale antes:  pip install "optimum[onnxruntime]" transformers   (ou use --de-pasta com os arquivos já baixados)')
+            return 1
+        tmp = a.saida + "-tmp"
+        shutil.rmtree(tmp, ignore_errors=True)
+        print(f"1/4 baixando e exportando {a.modelo} para ONNX…")
+        ORTModelForFeatureExtraction.from_pretrained(a.modelo, export=True).save_pretrained(tmp)
+        AutoTokenizer.from_pretrained(a.modelo).save_pretrained(tmp)
     os.makedirs(a.saida, exist_ok=True)
     origem = os.path.join(tmp, "model.onnx")
     if a.sem_quantizar:
@@ -49,7 +61,8 @@ def main():
         from onnxruntime.quantization import quantize_dynamic, QuantType
         quantize_dynamic(origem, os.path.join(a.saida, "model.onnx"), weight_type=QuantType.QInt8)
     shutil.copy(os.path.join(tmp, "tokenizer.json"), os.path.join(a.saida, "tokenizer.json"))
-    shutil.rmtree(tmp, ignore_errors=True)
+    if not a.de_pasta:
+        shutil.rmtree(tmp, ignore_errors=True)                     # só a pasta temporária que o próprio script criou
 
     print("3/4 calibrando o limiar com pares aleatórios de palavras comuns…")
     import numpy as np
