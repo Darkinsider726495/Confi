@@ -148,6 +148,8 @@ def assimilar(origem, texto, t=None):
         PFC.anotar_assimilacao(origem, titulos, t)
     except Exception:
         pass
+    if origem == "fala":
+        M.anotar_assuntos_no_diario(titulos)                     # o diário lembra DO QUE vocês falaram (modo «assuntos», padrão)
     return titulos
 
 

@@ -400,14 +400,15 @@ def _achar_titulo(titulo):
 
 
 # ---------------------------------------------------------------- diário
-def registrar_conversa(usuario, friday, externo=False):
-    """Acrescenta a troca ao diário do dia. Se a resposta se baseou em conteúdo da internet, só o seu pedido é guardado."""
-    if not ativo() or os.getenv("MEMORIA_AUTO", "1") == "0":
-        return
-    usuario = " ".join(str(usuario).split())[:500]
-    if len(usuario) < 2:
-        return
-    resp = "_(resposta baseada em conteúdo externo: não guardada)_" if externo else " ".join(str(friday).split())[:700]
+def modo_diario():
+    """Como o diário de conversas guarda o que você diz (decisão do criador):
+    «assuntos» (padrão) — só os assuntos que ela assimilou, nunca a frase («**10:00** Você: [sono ruim, treino]»);
+    «completo» — a frase e a resposta, como antes; «desligado» — nada. MEMORIA_AUTO=0 continua desligando tudo."""
+    m = os.getenv("MEMORIA_DIARIO", "assuntos").strip().lower()
+    return m if m in ("assuntos", "completo", "desligado") else "assuntos"
+
+
+def _acrescentar_no_diario(linha):
     agora = _agora()
     with _trava:
         caminho = _dentro(base() / "Conversas" / f"{agora:%Y-%m-%d}.md")
@@ -417,7 +418,28 @@ def registrar_conversa(usuario, friday, externo=False):
             atual = caminho.read_text(encoding="utf-8", errors="replace")
         else:
             atual = _montar({"tipo": "conversa", "data": f"{agora:%Y-%m-%d}", "tags": ["friday", "conversa"]}, f"# Conversas de {agora:%d/%m/%Y}\n")
-        _escrever(caminho, atual.rstrip("\n") + f"\n\n**{agora:%H:%M}** Você: {usuario}\n> FRIDAY: {resp}\n")
+        _escrever(caminho, atual.rstrip("\n") + f"\n\n**{agora:%H:%M}** " + linha + "\n")
+
+
+def registrar_conversa(usuario, friday, externo=False):
+    """Modo «completo»: acrescenta a troca ao diário do dia. Se a resposta se baseou em conteúdo da internet, só o seu pedido é guardado.
+    No modo «assuntos» (padrão) não grava nada aqui: quem escreve é a assimilação, só com os assuntos (`anotar_assuntos_no_diario`)."""
+    if not ativo() or os.getenv("MEMORIA_AUTO", "1") == "0" or modo_diario() != "completo":
+        return
+    usuario = " ".join(str(usuario).split())[:500]
+    if len(usuario) < 2:
+        return
+    resp = "_(resposta baseada em conteúdo externo: não guardada)_" if externo else " ".join(str(friday).split())[:700]
+    _acrescentar_no_diario(f"Você: {usuario}\n> FRIDAY: {resp}")
+
+
+def anotar_assuntos_no_diario(assuntos):
+    """Modo «assuntos»: o diário recebe só o que ela assimilou da sua fala — ela lembra DO QUE vocês falaram, como uma pessoa, sem a transcrição."""
+    if not ativo() or os.getenv("MEMORIA_AUTO", "1") == "0" or modo_diario() != "assuntos":
+        return
+    itens = [" ".join(str(a).split())[:40] for a in list(assuntos)[:5] if str(a).strip()]
+    if itens:
+        _acrescentar_no_diario("Você: [" + ", ".join(itens) + "]")
 
 
 def retomada(n=3):

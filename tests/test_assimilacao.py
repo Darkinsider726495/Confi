@@ -153,3 +153,102 @@ class Fila(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Diario(Base):
+    """Opção 2 do criador: o diário lembra DO QUE vocês falaram, sem a transcrição."""
+    def diario(self):
+        fs = list(self.base("Conversas").glob("*.md")) if self.base("Conversas").exists() else []
+        return fs[0].read_text(encoding="utf-8") if fs else ""
+
+    def test_padrao_o_diario_guarda_so_os_assuntos(self):
+        os.environ.pop("MEMORIA_DIARIO", None)
+        self.assertEqual(MEM.modo_diario(), "assuntos")
+        MEM.registrar_conversa(FRASE, "Boa sorte na prova!")             # o caminho antigo não grava mais nada
+        with ia("prova, banco de dados, joins"):
+            A.assimilar("fala", FRASE)
+        d = self.diario()
+        self.assertIn("Você: [Prova, Banco de dados, Joins]", d)
+        for pedaco in ("amanhã tenho", "revisar", "Boa sorte"):
+            self.assertNotIn(pedaco, d, pedaco)
+
+    def test_modo_completo_continua_como_antes(self):
+        with mock.patch.dict(os.environ, {"MEMORIA_DIARIO": "completo"}):
+            MEM.registrar_conversa("que horas são", "três da tarde")
+            with ia("horas"):
+                A.assimilar("fala", "que horas são")
+        d = self.diario()
+        self.assertIn("Você: que horas são", d)
+        self.assertNotIn("Você: [", d)
+
+    def test_modo_desligado_nao_grava_diario(self):
+        with mock.patch.dict(os.environ, {"MEMORIA_DIARIO": "desligado"}):
+            MEM.registrar_conversa("oi", "olá")
+            with ia("viagem"):
+                A.assimilar("fala", "vou viajar")
+        self.assertEqual(self.diario(), "")
+        self.assertTrue(self.base("Topicos", "Viagem.md").exists())      # mas ela continua aprendendo
+
+
+class Lembranca(Base):
+    """Conversa como gente: ela puxa assunto a partir do que assimilou de você."""
+    def setUp(self):
+        super().setUp()
+        CONV.ARQ.reiniciar()
+        for i in range(2):
+            N._ult.update(chave=None, t=0.0)
+            with ia("treino, sono ruim"), mock.patch("vida.plasticidade", return_value=1.0):
+                A.assimilar("fala", f"treinei tarde e dormi mal {i}")
+
+    def test_par_mais_forte_vira_assunto(self):
+        par = CONV._par_para_lembrar()
+        self.assertEqual({par["a"], par["b"]}, {"Treino", "Sono ruim"})
+
+    def test_o_modelo_recebe_so_os_assuntos_e_a_fala_dele_e_usada(self):
+        fala = "Ei, lembrei de você: treino tarde e sono ruim de novo essa semana? Como você dormiu ontem?"
+        with mock.patch.object(C, "resumir", return_value=fala) as modelo:
+            l = CONV.preparar_lembranca()
+        self.assertEqual(l["texto"], fala)
+        kw, args = modelo.call_args.kwargs, modelo.call_args.args
+        self.assertIs(kw["sistema"], CONV.SISTEMA_FALA)
+        self.assertIn("treino", args[1]); self.assertIn("sono ruim", args[1])
+        self.assertNotIn("dormi mal", args[1])                                  # nenhuma frase dele vai ao modelo
+
+    def test_fala_com_sentimento_real_ou_assunto_delicado_cai_no_molde(self):
+        for ruim in ("Eu te amo e senti sua falta, treinou hoje?", "Estou muito triste com seu sono ruim. Dormiu bem?",
+                     "Seu sono ruim pode ser doença, vai ao médico? Saúde é tudo.", "Veja http://x.com sobre treino, ok?", "ok?", "a" * 300):
+            with self.subTest(ruim[:30]), mock.patch.object(C, "resumir", return_value=ruim):
+                t = CONV.preparar_lembranca()["texto"]
+                self.assertNotEqual(t, ruim)
+                self.assertTrue(any(t == m.format(a="treino", b="sono ruim") or t == m.format(a="sono ruim", b="treino") for m in CONV._MOLDES), t)
+
+    def test_sem_ia_usa_molde_com_os_assuntos(self):
+        with mock.patch.object(C, "resumir", return_value=None):
+            t = CONV.preparar_lembranca()["texto"]
+        self.assertIn("treino", t); self.assertIn("sono ruim", t)
+
+    def test_ela_fala_a_lembranca_e_o_mesmo_par_nao_volta_logo(self):
+        ditos = []
+        with mock.patch.object(C, "resumir", return_value=None), mock.patch.object(CONV.RNG, "random", return_value=0.1):
+            self.assertIsNotNone(CONV.falar_agora(ditos.append))
+            self.assertEqual(CONV._e()["pendente"]["id"], "lembranca")
+            self.assertIsNone(CONV._par_para_lembrar())                         # já lembrado: só volta daqui a 3 dias
+            self.assertIsNotNone(CONV._par_para_lembrar(time.time() + CONV.LEMBRANCA_REPETE_S + 1))
+        self.assertIn("treino", ditos[0])
+
+    def test_a_resposta_dele_chega_a_ia_com_o_contexto_da_lembranca(self):
+        with mock.patch.object(C, "resumir", return_value=None), mock.patch.object(CONV.RNG, "random", return_value=0.1):
+            dito = CONV.falar_agora(lambda m: None)
+        self.assertIsNone(CONV.anotar_resposta("é verdade, ontem treinei às 22h"))
+        self.assertEqual(CONV._ctx.get("q"), dito)
+        CONV._ctx.pop("q", None)
+
+    def test_assunto_delicado_nunca_vira_lembranca(self):
+        CONV.ARQ.reiniciar()
+        N._e.update(v=None, raiz=None)
+        for i in range(2):
+            N._ult.update(chave=None, t=0.0)
+            with ia("dinheiro, salario"), mock.patch("vida.plasticidade", return_value=1.0):
+                A.assimilar("fala", f"x {i}")
+        par = CONV._par_para_lembrar()
+        self.assertTrue(par is None or "dinheiro" not in (par["a"] + par["b"]).lower())

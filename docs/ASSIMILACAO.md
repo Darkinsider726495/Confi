@@ -32,8 +32,25 @@ você fala / ela percebe
 - ela só fala sozinha se a conversa espontânea estiver ligada pelo dono;
 - `ASSIMILAR=0` desliga tudo; `ASSIMILAR_IA=0` usa só palavras-chave (offline, sem gastar o limite diário da IA).
 
-## O que ainda guarda frase inteira
-O diário `Conversas/AAAA-MM-DD.md` (`memoria.registrar_conversa`, ligado por `MEMORIA_AUTO`, padrão 1) continua registrando as conversas que vão para a IA, como antes desta mudança. Desligar ou trocar por assuntos é decisão do dono.
+## Diário: lembra DO QUE vocês falaram (decisão do criador)
+`MEMORIA_DIARIO` (padrão `assuntos`): o diário `Conversas/AAAA-MM-DD.md` recebe só os assuntos assimilados — `**10:00** Você: [Sono ruim, Treino]` —,
+escrito pela assimilação. `completo` volta ao jeito antigo (frase e resposta); `desligado` não escreve diário (ela continua aprendendo).
+Diários antigos não são tocados. «o que conversamos hoje?» passa a responder com os assuntos.
+
+## Conversa como gente: a lembrança (`conversa.py`)
+Quando ela tem vontade de conversar (conversa espontânea ligada pelo dono), na maioria das vezes ela puxa assunto a partir do que **aprendeu de você**:
+o par de assuntos com a sinapse mais forte e recente (≥ 1,5, caindo à metade por semana sem uso) que não foi puxado nos últimos 3 dias.
+
+```
+sinapse forte «treino ↔ sono ruim»  +  humor dela  +  hora
+        │  cerebro.resumir(papel de fala, SEM ferramentas) — só esses dados vão ao modelo; nenhuma frase sua
+        ▼
+ «Treinou tarde de novo? Da última vez que isso aconteceu você dormiu mal… como foi a noite?»
+        │  filtros: 15–240 caracteres, sem link, sem assunto delicado, sem afirmar sentimento real
+        ▼  (reprovou ou sem IA → frase pronta com os mesmos assuntos)
+ ela fala → a sua resposta chega à IA com o contexto da lembrança → e é assimilada (reforça a ligação)
+```
+Testes: `test_assimilacao.Lembranca` e `test_assimilacao.Diario`.
 
 ## Limites
 A qualidade dos assuntos depende do modelo (no celular, o Ollama pequeno erra mais que o da nuvem). Com a nuvem, a frase vai para o provedor de IA para extrair os assuntos — o mesmo caminho que a resposta já faz.

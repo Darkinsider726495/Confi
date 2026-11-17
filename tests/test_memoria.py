@@ -14,7 +14,8 @@ class Cofre(unittest.TestCase):
 
     def setUp(self):
         self.dir = tempfile.mkdtemp(prefix="cofre-", dir=E.TMP)
-        p = mock.patch.dict(os.environ, {"OBSIDIAN_VAULT": self.dir, "PATH": BIN + os.pathsep + os.environ["PATH"], "TERMUX_LOG": LOG})
+        # estes testes cobrem o diário no modo «completo» (frase + resposta); o padrão «assuntos» é coberto em test_assimilacao.Diario
+        p = mock.patch.dict(os.environ, {"OBSIDIAN_VAULT": self.dir, "PATH": BIN + os.pathsep + os.environ["PATH"], "TERMUX_LOG": LOG, "MEMORIA_DIARIO": "completo"})
         p.start()
         self.addCleanup(p.stop)
         self.addCleanup(shutil.rmtree, self.dir, True)
