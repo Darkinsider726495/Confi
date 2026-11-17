@@ -111,6 +111,20 @@ class Transformer(Base):
         self.assertIsNone(S.parecenca("xablau", "zumbaia"))                    # dois «[UNK]» não podem parecer 100% iguais
         self.assertIsNotNone(S.vetor("Treino"))                                # maiúscula não atrapalha
 
+    def test_centro_da_exportacao_e_subtraido(self):
+        antes = S.parecenca("treino", "joins")
+        c = np.ones(16, dtype=np.float32) * 5                                   # uma «direção comum» grande
+        np.save(os.path.join(self.mod, "centro.npy"), c)
+        with open(os.path.join(self.mod, "meta.json"), "w", encoding="utf-8") as f:
+            json.dump({"modelo": "teste", "prefixo": "", "limiar": 0.7, "centralizar": True}, f)
+        S._tr.update(dir=None)
+        self.assertIsNotNone(S._transformer()["centro"])
+        self.assertNotAlmostEqual(S.parecenca("treino", "joins"), antes, places=3)
+
+    def test_resposta_mantem_os_acentos(self):
+        self.topicos("Academia")
+        self.assertIn("musculação", S.tratar("o que é parecido com musculação?"))
+
     def test_sem_o_modelo_volta_para_a_rede_propria(self):
         with mock.patch.dict(os.environ, {"SIGNIFICADO_TRANSFORMER": tempfile.mkdtemp(dir=E.TMP)}):
             S._tr.update(dir=None)

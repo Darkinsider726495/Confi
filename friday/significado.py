@@ -168,7 +168,7 @@ def carregar(forcar=False):
 # ou sem o modelo, nada disso liga e ela usa a rede que treinou sozinha.
 TRANSFORMER_DIR = os.getenv("SIGNIFICADO_TRANSFORMER") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                                                          "modelos_ia", "significado-transformer")
-_tr = {"sess": None, "tok": None, "meta": None, "dir": None, "A": None, "A_raiz": None, "cache": {}}
+_tr = {"sess": None, "tok": None, "meta": None, "dir": None, "A": None, "A_raiz": None, "cache": {}, "centro": None}
 
 
 def _transformer():
@@ -176,7 +176,7 @@ def _transformer():
     d = os.getenv("SIGNIFICADO_TRANSFORMER") or TRANSFORMER_DIR
     if _tr["dir"] == d:
         return _tr if _tr["sess"] is not None else None
-    _tr.update(dir=d, sess=None, tok=None, meta=None, cache={}, A=None, A_raiz=None)
+    _tr.update(dir=d, sess=None, tok=None, meta=None, cache={}, A=None, A_raiz=None, centro=None)
     if np is None or not os.path.isfile(os.path.join(d, "model.onnx")):
         return None
     try:
@@ -193,7 +193,10 @@ def _transformer():
                 meta.update(json.load(f))
         except (OSError, ValueError):
             pass
-        _tr.update(sess=sess, tok=tok, meta=meta)
+        centro = None
+        if meta.get("centralizar") and os.path.isfile(os.path.join(d, "centro.npy")):
+            centro = np.load(os.path.join(d, "centro.npy"), allow_pickle=False).astype(np.float32)
+        _tr.update(sess=sess, tok=tok, meta=meta, centro=centro)
         return _tr
     except Exception:
         return None
@@ -258,6 +261,12 @@ def _base_transformer(texto):
     if n == 0:
         return None
     v = (v / n).astype(np.float32)
+    if t.get("centro") is not None and t["centro"].shape == v.shape:     # tira a direção comum (calibrada na exportação)
+        v = v - t["centro"]
+        n = float(np.linalg.norm(v))
+        if n == 0:
+            return None
+        v = (v / n).astype(np.float32)
     if len(t["cache"]) > 4096:
         t["cache"].clear()
     t["cache"][chave] = v
@@ -458,15 +467,17 @@ _COMBINA = re.compile(_P + r"(?P<a>.+?) (?P<neg>nao )?tem (?:tudo |nada )?a ver 
 
 
 def tratar(texto):
-    f = M._fold(" ".join(str(texto).split())).strip()
+    orig = " ".join(str(texto).split()).strip()
+    f = M._fold(orig)                                   # mesmo tamanho do original: os índices valem para os dois (mantém os acentos na resposta)
     m = _PARECIDO.match(f)
     if m:
+        m_orig = orig[m.start("t"):m.end("t")]
         if not disponivel():
             return "Minha rede de significado precisa do NumPy (no Termux: pkg install python-numpy)."
         if motor() is None:
             return "Minha rede de significado ainda não está treinada aqui."
-        t = m.group("t")
-        meus = parecidos(t, _topicos(), n=5, minimo=0.5)
+        t = m_orig if len(m_orig) == len(m.group("t")) else m.group("t")
+        meus = parecidos(t, _topicos(), n=5, minimo=0.5 if motor() == "propria" else limiar())
         if meus:
             return f"Para mim, {t} fica perto de: " + ", ".join(f"{a.lower()} ({round(s * 100)}%)" for a, s in meus) + ". É o que a minha rede aprendeu, não uma certeza."
         if vetor(t) is None:
@@ -474,7 +485,7 @@ def tratar(texto):
         return f"Ainda não tenho assuntos seus parecidos com {t}."
     m = _COMBINA.match(f)
     if m and disponivel():
-        a, b = m.group("a").strip(), m.group("b").strip()
+        a, b = orig[m.start("a"):m.end("a")].strip(), orig[m.start("b"):m.end("b")].strip()
         curtos = len(a.split()) <= 3 and len(b.split()) <= 3
         if curtos and vetor(a) is not None and vetor(b) is not None:      # só termos que a rede conhece: «isso tem a ver com aquilo» passa adiante
             combina = not (m.group("neg") or "nada a ver" in f)

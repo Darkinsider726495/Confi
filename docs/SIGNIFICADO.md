@@ -21,7 +21,7 @@ A etapa 1 pode vir **pronta** de um Transformer aberto, treinado com bilhões de
 
 | | Rede própria (padrão) | Com Transformer |
 |---|---|---|
-| Etapa 1 | ela treina sozinha (skip-gram) | **multilingual-e5-small** (~118 milhões de parâmetros, já sabe português), **congelado** |
+| Etapa 1 | ela treina sozinha (skip-gram) | **paraphrase-multilingual-MiniLM-L12-v2** (~118 milhões de parâmetros, 50+ línguas, já vem compactado para celular ARM), **congelado** |
 | Etapas 2 e 3 | mexem nos vetores das palavras | treinam um **adaptador** dela (matriz d×d que começa na identidade), salvo no cofre (`.cerebro/significado_adaptador.npz`) |
 | Limiar para ligar | 0,80 | **calibrado na exportação** para aquele modelo (`meta.json`) |
 
@@ -35,6 +35,28 @@ pip install -r requirements-transformer.txt       # numpy, onnxruntime, tokenize
 A FRIDAY detecta a pasta sozinha (`motor()` passa a dizer `transformer`). Sem ela, ou sem `onnxruntime`/`tokenizers`, volta para a rede própria.
 Termo que o Transformer não reconhece (só «[UNK]») fica **sem significado** — nunca «parecido» com outro desconhecido (teste).
 
+### Teste com os modelos reais (17/11/2026)
+12 pares de assuntos (6 relacionados, 6 sem relação), limiar no percentil 95 dos pares aleatórios:
+
+| Modelo | Relacionados (média) | Sem relação (média) | Acertos |
+|---|---|---|---|
+| e5-small, sem centralizar | 0,88 | 0,85 | 7/12 (tudo parece parecido) |
+| e5-small, centralizado | 0,12 | −0,05 | 9/12 |
+| **MiniLM, centralizado** (padrão) | **0,29** | −0,04 | **10/12** |
+
+Por isso a exportação **centraliza** (salva `centro.npy`, a direção comum dos vetores, que a FRIDAY subtrai) e o padrão é o MiniLM.
+Dentro da FRIDAY, com 14 assuntos ditos separados, ela ligou só por significado: sql↔banco de dados, férias↔viagem, guitarra↔música,
+estudo↔prova, cansaço↔musculação (e academia↔estudo — «academia» também é meio acadêmico). Nenhuma ligação absurda.
+
+### Jeito mais simples (o repositório já traz a versão ARM pronta)
+```bash
+mkdir -p ~/Downloads/minilm && cd ~/Downloads/minilm
+R=https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/main
+wget -O model.onnx $R/onnx/model_qint8_arm64.onnx      # 118 MB, já em 8 bits; roda no celular e no PC
+wget $R/tokenizer.json
+cd ~/friday-pi && python scripts/exportar_transformer.py --de-pasta ~/Downloads/minilm --saida modelos_ia/significado-transformer --sem-quantizar
+```
+
 ## Treinar
 ```bash
 python scripts/treinar_significado.py --base        # etapa 1 só com as docs → friday/significado_base.npz (pacote)
@@ -44,7 +66,7 @@ python scripts/treinar_significado.py --ajuste      # etapas 2 e 3 (ela também 
 No Termux precisa do NumPy: `pkg install python-numpy`. Sem ele, tudo isto fica desligado e a FRIDAY segue normal.
 
 ## Limites honestos
-- O script de exportação não foi executado neste ambiente (o Hugging Face é bloqueado aqui); o motor que roda o modelo foi testado com um Transformer de teste no mesmo formato ONNX (`tests/test_significado_transformer.py`).
+- Exportação e motor testados com os modelos reais (e5-small e MiniLM) num Linux x86; o arquivo ARM roda também em x86. No celular de verdade não foi testado.
 - `onnxruntime` e `tokenizers` instalam direto num PC/Linux (inclusive Kali). No Termux podem não ter versão pronta para Android; se não instalarem, ela segue com a rede própria.
 - A base foi treinada com só ~35 mil palavras (as docs): palavras raras nelas («treino») ainda saem com vizinhos ruins. O pré-treino no aparelho, com o cofre dela, é que dá o vocabulário do dono.
 - O modelo pessoal (`.cerebro/significado.npz`) é derivado da memória dela: fica no cofre, nunca no git.
