@@ -33,4 +33,9 @@ class Voz:
         return " ".join(s.text for s in seg).strip()
 
     def falar(self, texto):
-        subprocess.run(f'piper --model "{self.voz}" --output-raw | aplay -q -r 22050 -f S16_LE -t raw -', input=texto.encode(), shell=True)
+        # piper | aplay sem shell: o caminho da voz (PIPER_VOZ) vira argumento, nunca parte de um comando interpretado
+        piper = subprocess.Popen(["piper", "--model", str(self.voz), "--output-raw"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        aplay = subprocess.Popen(["aplay", "-q", "-r", "22050", "-f", "S16_LE", "-t", "raw", "-"], stdin=piper.stdout)
+        piper.stdout.close()                    # o aplay fica sendo o único leitor do áudio
+        piper.communicate(texto.encode())
+        aplay.wait()

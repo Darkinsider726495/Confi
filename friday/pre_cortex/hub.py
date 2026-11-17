@@ -30,6 +30,8 @@ ATIVOS = ("recebido", "em_andamento", "aguardando_execucao")
 ESPERANDO = ("aguardando_autorizacao", "aguardando_confirmacao_do_corretor")
 
 
+_TRAVA_POOL = threading.Lock()
+
 class Hub(Fases):
     def __init__(self, cfg=None, pasta=None, relogio=time.time, dormir=time.sleep, token=None, vigia=True):
         self.cfg = cfg if cfg is not None else CF.Config()
@@ -108,12 +110,14 @@ class Hub(Fases):
         permitidos = ("estado", "modulo", "recuperavel", "tipo_objetivo", "suportado", "neuronio", "acao", "ok", "codigo", "worker", "para", "de")
         dados = {k: v for k, v in campos.items() if k in permitidos and isinstance(v, (str, int, float, bool, type(None)))}
         evento = {"evento": str(tipo)[:48], "fase": str(d.get("fase", ""))[:40], "ciclo": int(d.get("ciclo", 0) or 0), "dados": dados,
-                   "emitido_em": self.rel()}
+                   "emitido_em": self.rel(), "seq": int(registro.get("seq", 0) or 0)}   # seq: o neurônio reconhece o mesmo evento se vier de novo pelo replay
         # Pool próprio: eventos não consomem vagas do escalonador de objetivos.
         if not hasattr(self, "_pool_eventos"):
-            self._pool_eventos = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="pc-evento")
-            self._limite_eventos = threading.BoundedSemaphore(64)
-            self._eventos_descartados = 0
+            with _TRAVA_POOL:                    # dois eventos simultâneos não criam dois pools (um deles ficaria órfão)
+                if not hasattr(self, "_pool_eventos"):
+                    self._limite_eventos = threading.BoundedSemaphore(64)
+                    self._eventos_descartados = 0
+                    self._pool_eventos = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="pc-evento")
 
         def enviar(destino, msg):
             try:
@@ -138,7 +142,8 @@ class Hub(Fases):
         return registro
 
     def _replay_destino(self, nome, destino, pid=None):
-        """Reenvia janela recente de metadados quando um worker inicia ou reinicia."""
+        """Reenvia os 8 eventos mais recentes do log (no total, não por neurônio) quando um worker inicia ou reinicia.
+        Cada evento leva o `seq`; o neurônio ignora o que já recebeu, então replay repetido ou interrompido não duplica contexto."""
         try:
             registros = self.arm.eventos(0, None, 8)
             neuronios = [n for n, d in self.rot.rotas.items() if d.nome == nome]

@@ -24,16 +24,24 @@ def projetar_evento(evento):
         return None
     dados = evento.get("dados") if isinstance(evento.get("dados"), dict) else evento
     seguros = {k: v for k, v in dados.items() if k in CAMPOS_SEGUROS and isinstance(v, (str, int, float, bool, type(None)))}
+    try:
+        seq = int(evento.get("seq", 0) or 0)
+    except (TypeError, ValueError):
+        seq = 0
+    # `seq` é só o número de ordem do log (sem conteúdo): permite ao neurônio reconhecer o mesmo evento vindo ao vivo e pelo replay.
     return {"evento": tipo, "fase": str(evento.get("fase", ""))[:40],
             "ciclo": int(evento.get("ciclo", 0) or 0), "dados": seguros,
-            "emitido_em": float(evento.get("emitido_em", evento.get("em", 0)) or 0)}
+            "emitido_em": float(evento.get("emitido_em", evento.get("em", 0)) or 0), "seq": seq}
 
 
 class MemoriaColetiva:
     """Índice persistente de padrões operacionais, reconstruível a partir do JSONL."""
-    def __init__(self, pasta=None, max_transicoes=10000):
+    def __init__(self, pasta=None, max_transicoes=10000, max_objetivos=2000):
         self.pasta = pasta
         self.max_transicoes = max(100, int(max_transicoes))
+        # _ultimos/_ultimo_neuronio são estado de trabalho por objetivo (qual foi o último evento/neurônio), não conhecimento:
+        # guardam os objetivos mais recentes para o JSON não crescer sem fim no celular. Contagens e transições aprendidas ficam todas.
+        self.max_objetivos = max(50, int(max_objetivos))
         self._lock = threading.RLock()
         # serializa as gravações (gravador de fundo × flush explícito): os dois usam o mesmo .tmp; sem isto
         # um truncaria o arquivo enquanto o outro o move para o lugar. Separado de _lock para não travar o registro.
@@ -57,6 +65,13 @@ class MemoriaColetiva:
             self._thread = threading.Thread(target=self._laco_gravacao, name="pc-memoria-coletiva", daemon=True)
             self._thread.start()
 
+    def _lembrar(self, mapa, objetivo, valor):
+        """Atualiza o estado do objetivo e o põe como o mais recente; passa do limite, sai o objetivo mais antigo."""
+        mapa.pop(objetivo, None)
+        mapa[objetivo] = valor
+        while len(mapa) > self.max_objetivos:
+            mapa.pop(next(iter(mapa)))
+
     @property
     def seq(self):
         return self._seq
@@ -72,8 +87,8 @@ class MemoriaColetiva:
                 self._tipos.update({str(k): int(v) for k, v in d.get("tipos", {}).items() if int(v) >= 0})
                 self._transicoes.update({str(k): int(v) for k, v in d.get("transicoes", {}).items() if int(v) >= 0})
                 self._conexoes.update({str(k): int(v) for k, v in d.get("conexoes", {}).items() if int(v) >= 0})
-                self._ultimo_neuronio = {str(k): str(v) for k, v in d.get("ultimo_neuronio", {}).items()}
-                self._ultimos = {str(k): str(v) for k, v in d.get("ultimos", {}).items()}
+                self._ultimo_neuronio = dict(list({str(k): str(v) for k, v in d.get("ultimo_neuronio", {}).items()}.items())[-self.max_objetivos:])
+                self._ultimos = dict(list({str(k): str(v) for k, v in d.get("ultimos", {}).items()}.items())[-self.max_objetivos:])
                 self._seq = int(d.get("seq", 0))
         except FileNotFoundError:
             pass
@@ -94,7 +109,7 @@ class MemoriaColetiva:
                 anterior_no = self._ultimo_neuronio.get(objetivo)
                 if anterior_no and anterior_no != alvo:
                     self._conexoes[anterior_no + "->" + alvo] += 1
-                self._ultimo_neuronio[objetivo] = alvo
+                self._lembrar(self._ultimo_neuronio, objetivo, alvo)
             if tipo not in TIPOS_IGNORADOS:
                 self._tipos[tipo] += 1
                 anterior = self._ultimos.get(objetivo) if objetivo else None
@@ -105,7 +120,7 @@ class MemoriaColetiva:
                         menor = min(self._transicoes, key=self._transicoes.get)
                         del self._transicoes[menor]
                 if objetivo:
-                    self._ultimos[objetivo] = tipo
+                    self._lembrar(self._ultimos, objetivo, tipo)
             self._historico.append(e)
             self._suja = True
             self._despertar.set()
@@ -131,14 +146,14 @@ class MemoriaColetiva:
                     anterior_no = self._ultimo_neuronio.get(objetivo)
                     if anterior_no and anterior_no != alvo:
                         self._conexoes[anterior_no + "->" + alvo] += 1
-                    self._ultimo_neuronio[objetivo] = alvo
+                    self._lembrar(self._ultimo_neuronio, objetivo, alvo)
                 if tipo not in TIPOS_IGNORADOS:
                     self._tipos[tipo] += 1
                     anterior = self._ultimos.get(objetivo) if objetivo else None
                     if anterior and anterior != tipo:
                         self._transicoes[anterior + "->" + tipo] += 1
                     if objetivo:
-                        self._ultimos[objetivo] = tipo
+                        self._lembrar(self._ultimos, objetivo, tipo)
             if alterou:
                 self._suja = True
                 self._despertar.set()
@@ -161,7 +176,7 @@ class MemoriaColetiva:
             tmp = self._arquivo() + ".tmp"
             try:
                 with open(tmp, "w", encoding="utf-8") as f:
-                    json.dump(d, f, ensure_ascii=False, sort_keys=True)
+                    json.dump(d, f, ensure_ascii=False)   # sem sort_keys: a ordem de "ultimos" é a ordem de recência dos objetivos
                     f.flush(); os.fsync(f.fileno())
                 os.replace(tmp, self._arquivo())
                 with self._lock:

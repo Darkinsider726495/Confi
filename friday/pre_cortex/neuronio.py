@@ -52,7 +52,13 @@ class Neuronio:
         from collections import deque
         if not hasattr(self, "_eventos_contexto"):
             self._eventos_contexto = deque(maxlen=32)
+            self._seqs_vistos = deque(maxlen=256)
         if isinstance(evento, dict):
+            seq = evento.get("seq")
+            if isinstance(seq, int) and seq > 0:          # mesmo evento ao vivo e pelo replay: guarda uma vez só
+                if seq in self._seqs_vistos:
+                    return
+                self._seqs_vistos.append(seq)
             self._eventos_contexto.append(copy.deepcopy(evento))
 
     def eventos_recentes(self, limite=10):

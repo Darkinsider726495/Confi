@@ -126,6 +126,39 @@ class MemoriaColetivaTest(unittest.TestCase):
                 self.assertEqual(json.load(f)["tipos"]["fase_concluida"], 200)
             m.encerrar()
 
+    def test_estado_por_objetivo_nao_cresce_sem_fim_e_contagens_ficam(self):
+        with tempfile.TemporaryDirectory() as d:
+            m = MemoriaColetiva(d, max_objetivos=50)
+            for i in range(200):
+                m.registrar({"seq": 2 * i + 1, "objetivo": f"pc{i:04d}", "tipo": "fase_iniciada"})
+                m.registrar({"seq": 2 * i + 2, "objetivo": f"pc{i:04d}", "tipo": "fase_concluida"})
+            self.assertEqual(len(m._ultimos), 50)
+            self.assertIn("pc0199", m._ultimos); self.assertNotIn("pc0000", m._ultimos)       # ficam os mais recentes
+            r = m.resumo()
+            self.assertEqual(r["tipos"]["fase_concluida"], 200)                                # o aprendido não se perde
+            self.assertEqual(r["transicoes"]["fase_iniciada->fase_concluida"], 200)
+            self.assertTrue(m.flush()); m.encerrar()
+            m2 = MemoriaColetiva(d, max_objetivos=50)                                           # recarrega na mesma ordem de recência
+            self.assertEqual(list(m2._ultimos)[-1], "pc0199")
+            self.assertEqual(len(m2._ultimos), 50)
+            m2.encerrar()
+
+    def test_projecao_leva_seq_para_deduplicar(self):
+        e = projetar_evento({"seq": 42, "objetivo": "pc1", "tipo": "fase_concluida", "texto": "segredo"})
+        self.assertEqual(e["seq"], 42)
+        self.assertNotIn("segredo", json.dumps(e))
+
+    def test_neuronio_nao_duplica_evento_vindo_ao_vivo_e_pelo_replay(self):
+        from pre_cortex.neuronio import Neuronio
+        n = Neuronio.__new__(Neuronio)
+        ev = {"evento": "fase_concluida", "fase": "x", "ciclo": 1, "dados": {}, "emitido_em": 1.0, "seq": 7}
+        n.receber_evento(dict(ev), None)        # ao vivo
+        n.receber_evento(dict(ev), None)        # replay do mesmo evento
+        n.receber_evento(dict(ev, seq=8), None)
+        n.receber_evento({"evento": "sem_seq"}, None)   # evento antigo sem seq continua aceito
+        n.receber_evento({"evento": "sem_seq"}, None)
+        self.assertEqual([e.get("seq") for e in n.eventos_recentes(10)], [7, 8, None, None])
+
     def test_recarrega_agregados(self):
         with tempfile.TemporaryDirectory() as d:
             m = MemoriaColetiva(d); m.registrar({"seq": 4, "objetivo": "pc0002", "tipo": "recuperado"})
