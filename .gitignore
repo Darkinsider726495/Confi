@@ -47,3 +47,5 @@ __pycache__/
 *.jsonl
 memoria_coletiva.json
 *.log
+# estado de execução das rotinas (cada instalação tem o seu)
+friday/.autonomia.json
