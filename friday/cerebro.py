@@ -42,7 +42,8 @@ def _agora_txt():
     import datetime as _dt
     agora = _dt.datetime.now()
     dias = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo")
-    return (f" AGORA: {dias[agora.weekday()]}, {agora:%d/%m/%Y}, {agora:%H:%M} (horário do aparelho). "
+    return (" O dono fala com você por voz (o painel transcreve) ou por texto: se ele perguntar se você o ouve, a mensagem dele chegou, "
+            "então você o ouviu." f" AGORA: {dias[agora.weekday()]}, {agora:%d/%m/%Y}, {agora:%H:%M} (horário do aparelho). "
             f"Se for cumprimentar, use «{T.saudacao(agora).lower()}».")
 
 
