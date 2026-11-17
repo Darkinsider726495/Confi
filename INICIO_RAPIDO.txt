@@ -1,6 +1,6 @@
 FRIDAY — INÍCIO RÁPIDO
 
-ANDROID (TERMUX): leia EXECUTAR_FRIDAY_TERMUX.txt e rode `bash EXECUTAR_FRIDAY.sh`.
+ANDROID (TERMUX): instalação nova: `bash termux/instalar-termux.sh`. Atualização: leia INSTALAR_ATUALIZACAO.md.
 LINUX: rode `bash EXECUTAR_FRIDAY.sh`.
 WINDOWS: rode `EXECUTAR_FRIDAY.bat` (requer Python 3 instalado).
 
