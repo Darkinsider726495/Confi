@@ -18,7 +18,9 @@ Regras deste módulo:
     aqui isso aparece como «simultâneo». A inibição do artigo vale só para as iniciativas do próprio pré-córtex.
   - O que ele de fato faz: guarda metas, empurra a curiosidade para o assunto de uma meta (`curiosidade.interesse`: o mesmo caminho seguro de sempre, com os seus
     limites, a quarentena e as chaves que só você liga), registra decisões e responde por voz. Não tem ferramenta da IA nem executa ação do corretor.
-  - Nada é apagado: meta cumprida ou arquivada continua guardada; cada mudança de decisão vai para `.cerebro/decisoes.jsonl`."""
+  - Nada é apagado: meta cumprida ou arquivada continua guardada; cada mudança de decisão vai para `.cerebro/decisoes.jsonl`.
+  - Ele assimila a atenção do núcleo (`assimilar`, assinado em `nucleo.assinar`) e guarda cada sinal notado como registro de atividade em
+    `.cerebro/atividades.jsonl` (só rótulos: origem, tipo, saliência; nunca o texto). É quem responde «no que você está focada?»."""
 import os, re, json, time, threading, datetime as dt
 import memoria as M
 import estado as ES
@@ -155,6 +157,44 @@ def chave_tema(t):
     relação explícita (id da meta ou ligação do dono), nunca esta chave. Assunto só de palavras de ligação compara o texto dobrado, para não virar chave vazia."""
     toks = sorted(_tokens(t))
     return " ".join(toks) if toks else " ".join(M._fold(str(t)).split())
+
+
+# ---------------------------------------------------------------- registro de atividades (assimila a atenção do núcleo)
+_ativ = {"dia": "", "hoje": 0, "por_origem": {}, "ultimas": []}   # "ultimas" é memória de trabalho (50); o histórico inteiro fica no .jsonl
+
+
+def assimilar(sinal):
+    """O núcleo notou um sinal (assinatura `nucleo.assinar(ao_entrar=...)`): o pré-córtex o assimila e guarda como registro de atividade.
+    Só rótulos — origem, tipo, saliência, se a fonte é confiável e quando —, nunca o texto nem o resumo. Só acrescenta em
+    `.cerebro/atividades.jsonl` (nada é apagado). Nunca levanta erro: assimilar não pode atrapalhar a atenção."""
+    try:
+        t = float(sinal.get("t") or time.time())
+        reg = {"t": round(t, 3), "origem": str(sinal.get("origem") or "interno")[:20], "tipo": str(sinal.get("tipo") or "")[:30],
+               "saliencia": round(float(sinal.get("saliencia") or 0.0), 3), "confiavel": bool(sinal.get("confiavel"))}
+    except (TypeError, ValueError, AttributeError):
+        return None
+    dia = time.strftime("%Y-%m-%d", time.localtime(t))
+    with _trava:
+        if _ativ["dia"] != dia:
+            _ativ.update(dia=dia, hoje=0, por_origem={})
+        _ativ["hoje"] += 1
+        _ativ["por_origem"][reg["origem"]] = _ativ["por_origem"].get(reg["origem"], 0) + 1
+        _ativ["ultimas"] = (_ativ["ultimas"] + [reg])[-50:]
+    if M.ativo():
+        try:
+            arq = M._dentro(M.base() / ".cerebro" / "atividades.jsonl")
+            arq.parent.mkdir(parents=True, exist_ok=True)
+            with open(arq, "a", encoding="utf-8") as f:                       # só acrescenta: nada é apagado
+                f.write(json.dumps(reg, ensure_ascii=False) + "\n")
+        except (OSError, ValueError):
+            pass
+    return dict(reg)
+
+
+def atividades():
+    """Resumo do registro de hoje (o histórico completo fica em `.cerebro/atividades.jsonl`)."""
+    with _trava:
+        return {"dia": _ativ["dia"], "hoje": _ativ["hoje"], "por_origem": dict(_ativ["por_origem"]), "ultimas": list(_ativ["ultimas"])[-5:]}
 
 
 def perceber(origem, tipo, resumo="", agora=None, dopamina=None, tema=""):
@@ -744,11 +784,22 @@ def falar_metas():
 
 
 def falar_foco():
+    """O pré-córtex responde pelo foco: a memória de trabalho dele + o que assimilou da atenção do núcleo + o registro de hoje."""
     f = foco()
-    if not f:
-        return "Meu foco está vazio agora: nada novo chamou a minha atenção."
     nomes = {"fala": "o que você disse", "visao": "uma olhada", "estudo": "um estudo", "maos": "as suas mãos", "meta": "uma meta", "sistema": "o sistema"}
-    return "Estou com a atenção em " + _lista(f"{nomes.get(i['origem'], i['origem'])} ({i['tipo']})" for i in f[:5]) + (f" e mais {len(f) - 5}." if len(f) > 5 else ".")
+    if f:
+        partes = ["Estou com a atenção em " + _lista(f"{nomes.get(i['origem'], i['origem'])} ({i['tipo']})" for i in f[:5]) + (f" e mais {len(f) - 5}." if len(f) > 5 else ".")]
+    else:
+        partes = ["Meu foco está vazio agora: nada novo chamou a minha atenção."]
+    rot = {"fala": "você falou", "maos": "gesto das mãos", "visao": "eu vi", "sistema": "o sistema avisou", "web": "li na internet", "interno": "eu mesma"}
+    ult = atividades()["ultimas"]
+    if ult:                                                    # o que o núcleo notou por último (chegou pela assinatura; o pré-córtex não importa o núcleo)
+        partes.append("O núcleo notou por último: " + _lista(f"{rot.get(x['origem'], x['origem'])} ({x['tipo']})" + ("" if x["confiavel"] else ", não verificado") for x in reversed(ult[-4:])) + ".")
+    a = atividades()
+    if a["hoje"]:
+        partes.append(f"Registrei {a['hoje']} atividade{'s' if a['hoje'] != 1 else ''} hoje (" + ", ".join(f"{nomes.get(o, o)}: {n}" for o, n in sorted(a["por_origem"].items(), key=lambda p: -p[1])) + ").")
+    partes.append("É um modelo de atenção do meu código, não uma consciência.")
+    return " ".join(partes)
 
 
 def falar_limites():
@@ -764,7 +815,8 @@ def falar_como_funciona():
 _P = r"^(?:(?:friday|jarvis|fraide)[ ,]+)?"
 _DECIDIU = re.compile(_P + r"(?:o que (?:voce )?(?:decidiu|quer fazer|vai fazer|esta querendo fazer|quer agora)(?: agora)?|o que (?:voce )?esta pensando em fazer|qual (?:e )?(?:a )?sua decisao)$")
 _METAS = re.compile(_P + r"(?:quais (?:sao )?(?:as )?(?:suas )?metas|(?:suas|minhas) metas|o que (?:voce )?(?:esta|ta) perseguindo|qual (?:e )?(?:a )?sua meta)$")
-_FOCO = re.compile(_P + r"(?:(?:em que|no que) (?:voce )?(?:esta|ta) (?:focada|atenta|concentrada)|qual (?:e )?(?:o )?seu foco|no que (?:voce )?(?:esta )?(?:prestando atencao|pensando))$")
+_FOCO = re.compile(_P + r"(?:(?:em que|no que|com o que) (?:voce )?(?:esta|ta) (?:focad[ao]|atent[ao]|concentrad[ao])|qual (?:e )?(?:o )?seu foco|(?:em que|no que|com o que) (?:voce )?(?:esta |ta )?(?:prestando atencao|pensando)|"
+                   r"o que (?:esta )?(?:chamando|chamou|prendeu) (?:a )?sua atencao|onde (?:esta|ta) (?:a )?sua atencao)(?: agora| hoje)?$")
 _LIMITES = re.compile(_P + r"(?:o que (?:voce )?nao (?:consegue|pode) (?:fazer )?(?:agora)?|quais (?:sao )?(?:os )?seus limites|o que te limita|o que esta te faltando)$")
 _FUNCIONA = re.compile(_P + r"(?:como funciona (?:o )?seu (?:pre ?-?cortex|cortex pre ?-?frontal|pre ?-?frontal)|o que e (?:o )?seu (?:pre ?-?cortex|cortex pre ?-?frontal|pre ?-?frontal)|fale (?:do|sobre o) seu (?:pre ?-?cortex|cortex pre ?-?frontal))$")
 _NOVA_META = re.compile(_P + r"(?:tenha como meta|sua meta e|defina (?:uma )?meta|nova meta|meta)[: ]+(?:aprender|estudar)(?: sobre| a respeito de)? (?P<t>.+)$")

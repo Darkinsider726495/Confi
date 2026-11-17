@@ -43,6 +43,16 @@ Só vale **estudo que aconteceu** (a nota foi guardada em `Estudos/` e o contado
 
 A semelhança usada é contagem de palavras (Jaccard), não entendimento de significado. Não há modelo de embeddings neste módulo.
 
+## Registro de atividades (assimila o núcleo)
+
+O núcleo (`nucleo.py`) observa a atenção; o pré-córtex **assimila** o que ele nota. Em `main.py`, `NC.assinar(ao_entrar=PFC.assimilar)` faz cada sinal notado chegar a `assimilar()`, que:
+
+- guarda em `.cerebro/atividades.jsonl` **só rótulos** — `t`, `origem`, `tipo`, `saliencia`, `confiavel` —, nunca o texto nem o resumo;
+- só acrescenta (nada é apagado); na memória fica o contador de hoje por origem e as 50 últimas, o histórico inteiro fica no arquivo;
+- nunca levanta erro: assimilar não pode atrapalhar a atenção.
+
+O pré-córtex **não importa** o núcleo (continua só lendo o resto): o núcleo empurra os sinais pela assinatura. Por isso é o pré-córtex quem responde «no que você está focada?»; o núcleo segue respondendo só sobre a arquitetura.
+
 ## Comandos de voz
 
 Tratados por `tratar()`, na ordem de `main.processar` logo antes da curiosidade:
@@ -51,7 +61,7 @@ Tratados por `tratar()`, na ordem de `main.processar` logo antes da curiosidade:
 |---|---|
 | «o que você decidiu?» / «o que você quer fazer?» | `falar_decisao` |
 | «quais são as suas metas?» | `falar_metas` (inclui candidatos pendentes) |
-| «no que você está focada?» | `falar_foco` |
+| «no que você está focada?» / «o que chamou sua atenção?» / «onde está a sua atenção?» | `falar_foco`: memória de trabalho do pré-córtex + o que o núcleo notou por último + quantas atividades registrou hoje |
 | «o que você não consegue agora?» | `falar_limites` |
 | «como funciona o seu pré-córtex?» | `falar_como_funciona` |
 | «tenha como meta aprender sobre X» | `nova_meta("aprender", X)` (X passa pelo filtro de assunto) |

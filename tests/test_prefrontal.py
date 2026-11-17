@@ -27,6 +27,7 @@ class Base(Cerebro):
         CUR.ARQ.reiniciar()
         P._foco.clear(); P._hab.clear()
         P._agora_.update(dec=None, q=None, mesmo=0, assinatura=None, resfria={}, janela={})
+        P._ativ.update(dia="", hoje=0, por_origem={}, ultimas=[])
         p = mock.patch.dict(os.environ, {"PFC_FOCO": "0"})
         p.start(); self.addCleanup(p.stop)
 
@@ -321,6 +322,57 @@ class Pensar(Base):
         json.dumps(r)
         self.assertEqual(r["metas"][0]["titulo"], "Aprender sobre buracos negros")
         self.assertIn("estudar", r["agir"]); self.assertEqual(set(r["impulsos"]), set(P.IMPULSOS))
+
+
+class RegistroDeAtividades(Base):
+    """O pré-córtex assimila o que o núcleo nota e guarda como registro de atividade — só rótulos, só acrescentando."""
+    def setUp(self):
+        super().setUp()
+        import nucleo as NC
+        self.NC = NC
+        NC.zerar_para_teste()
+        NC.assinar(ao_entrar=P.assimilar)
+        self.addCleanup(NC.zerar_para_teste)
+
+    def arquivo(self):
+        return self.base(".cerebro", "atividades.jsonl")
+
+    def test_sinal_notado_pelo_nucleo_vira_registro_so_com_rotulos(self):
+        s = self.NC.perceber("fala", "pedido", "minha senha é 1234 e moro na Rua X", chave="fala:pedido:1")
+        self.assertTrue(s["notado"])
+        linhas = self.arquivo().read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(linhas), 1)
+        reg = json.loads(linhas[0])
+        self.assertEqual(set(reg), {"t", "origem", "tipo", "saliencia", "confiavel"})
+        self.assertEqual((reg["origem"], reg["tipo"]), ("fala", "pedido"))
+        self.assertNotIn("1234", linhas[0]); self.assertNotIn("Rua", linhas[0])   # nunca o texto nem o resumo
+        self.assertEqual(P.atividades()["hoje"], 1)
+
+    def test_registro_so_acrescenta_nada_e_apagado(self):
+        for i in range(3):
+            self.NC.perceber("visao", f"objeto{i}", chave=f"visao:{i}")
+        n1 = len(self.arquivo().read_text(encoding="utf-8").splitlines())
+        self.NC.perceber("fala", "pedido", chave="fala:x")
+        linhas = self.arquivo().read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(linhas), n1 + 1)
+        self.assertEqual(json.loads(linhas[-1])["origem"], "fala")
+
+    def test_sinal_invalido_nao_quebra_a_atencao(self):
+        self.assertIsNone(P.assimilar(None))
+        self.assertIsNone(P.assimilar({"t": "não é número"}))
+
+    def test_main_assina_o_pre_cortex_no_nucleo(self):
+        src = (Path(MAIN.__file__)).read_text(encoding="utf-8")
+        self.assertIn("NC.assinar(ao_entrar=PFC.assimilar)", src)
+
+    def test_foco_por_voz_e_do_pre_cortex_e_inclui_o_registro(self):
+        with mock.patch.object(MAIN.C, "responder", side_effect=AssertionError("foi parar na IA")):
+            self.NC.perceber("visao", "caneca", chave="visao:caneca")
+            for frase in ("no que você está focada?", "o que chamou sua atenção?", "onde está a sua atenção agora?", "com o que você está concentrada?"):
+                r = MAIN.processar(frase)
+                self.assertTrue(r.startswith(("Estou com a atenção", "Meu foco")), (frase, r))
+                self.assertIn("Registrei", r)
+                self.assertIn("não uma consciência", r)
 
 
 class PorVoz(Base):

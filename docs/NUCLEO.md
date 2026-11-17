@@ -14,7 +14,7 @@ O núcleo está integrado ao `main.py`, mas **não é um escalonador**. Ele regi
 ## Integração
 
 - `main.processar()` registra `fala:pedido` com resumo fixo; o conteúdo integral da fala não é enviado ao núcleo.
-- `NC.tratar()` responde consultas sobre foco e arquitetura.
+- `NC.tratar()` responde consultas sobre a arquitetura. As perguntas de foco são do pré-córtex, que roda antes em `processar()` e assimila cada sinal notado (`NC.assinar(ao_entrar=PFC.assimilar)`), guardando-o como registro de atividade em `.cerebro/atividades.jsonl` (ver `docs/PREFRONTAL.md`).
 - `estado_completo()` expõe `nucleo` no painel sem criar o hub do pré-córtex.
 - `agir()` e `ocupado()` são métricas de atividade. `liberar()` permanece permissivo por compatibilidade e **nunca deve ser usado como trava**.
 - `NUCLEO=0` desliga o cálculo de atenção, não o pré-córtex, os workers, o coordenador ou a FRIDAY.

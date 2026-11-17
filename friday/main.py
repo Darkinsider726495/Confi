@@ -32,6 +32,7 @@ import objetivos as OBJ
 import coordenador as COORD  # ao importar, liga a reserva de recursos em tarefas.RESERVAS (docs/COORDENADOR.md)
 import retomada as RET  # depois de reinício/queda: confere o que ficou pela metade e retoma só o que é seguro (docs/RETOMADA.md)
 import pre_cortex.fachada as PC  # pré-córtex distribuído: nove neurônios por mensagens, tela /precortex (docs/PRE_CORTEX.md); o hub só nasce quando alguém usa
+NC.assinar(ao_entrar=PFC.assimilar)  # o pré-córtex assimila cada sinal que o núcleo nota e o guarda como registro de atividade (só rótulos)
 
 ESTADO ={"estado": "iniciando", "voce": "", "friday": ""}
 TRAVA, PEDIDO, _c = threading.Lock(), threading.Lock(), {"t": 0, "s": ""}
@@ -177,9 +178,9 @@ def processar(t):
         if r is None:
             r = MAOS.tratar(t)  # "como uso as mãos?", "meus modelos 3d"
         if r is None:
-            r = NC.tratar(t)  # consultas de atenção/arquitetura; camada observacional, sem bloqueio
+            r = PFC.tratar(t)  # pré-córtex: "o que você decidiu?", "quais são as suas metas?", "tenha como meta aprender sobre...", "no que você está focada?" (responde pelo foco, com o que assimilou do núcleo)
         if r is None:
-            r = PFC.tratar(t)  # pré-córtex: "o que você decidiu?", "quais são as suas metas?", "tenha como meta aprender sobre...", "no que você está focada?"
+            r = NC.tratar(t)  # consultas de arquitetura (o foco já foi respondido pelo pré-córtex); camada observacional, sem bloqueio
         if r is None:
             r = TAR.tratar(t)  # tarefas: "quais são as minhas tarefas?", "cancela a tarefa 3", "retomar a tarefa 3", "a tarefa 3 está feita"
         if r is None:
