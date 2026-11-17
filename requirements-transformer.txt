@@ -1,0 +1,4 @@
+# Opcional: Transformer pré-treinado na rede de significado (docs/SIGNIFICADO.md). Só para RODAR o modelo exportado.
+numpy
+onnxruntime
+tokenizers

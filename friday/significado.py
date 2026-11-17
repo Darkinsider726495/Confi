@@ -160,8 +160,119 @@ def carregar(forcar=False):
         return False
 
 
+# ---------------------------------------------------------------- Transformer pré-treinado (ONNX) + adaptador dela
+# Etapa 1 pode vir PRONTA de um Transformer aberto (ex.: intfloat/multilingual-e5-small), exportado no PC/Colab por
+# scripts/exportar_transformer.py para modelos_ia/significado-transformer/ (model.onnx + tokenizer.json + meta.json).
+# Os pesos do Transformer ficam CONGELADOS; as etapas 2 e 3 treinam um ADAPTADOR dela (matriz d×d, começa na identidade)
+# com as sinapses e o feedback — a mesma ideia de personalizar um modelo grande sem retreinar tudo. Sem onnxruntime/tokenizers
+# ou sem o modelo, nada disso liga e ela usa a rede que treinou sozinha.
+TRANSFORMER_DIR = os.getenv("SIGNIFICADO_TRANSFORMER") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                                                         "modelos_ia", "significado-transformer")
+_tr = {"sess": None, "tok": None, "meta": None, "dir": None, "A": None, "A_raiz": None, "cache": {}}
+
+
+def _transformer():
+    """Sessão ONNX + tokenizador, carregados uma vez. None se faltar biblioteca ou modelo."""
+    d = os.getenv("SIGNIFICADO_TRANSFORMER") or TRANSFORMER_DIR
+    if _tr["dir"] == d:
+        return _tr if _tr["sess"] is not None else None
+    _tr.update(dir=d, sess=None, tok=None, meta=None, cache={}, A=None, A_raiz=None)
+    if np is None or not os.path.isfile(os.path.join(d, "model.onnx")):
+        return None
+    try:
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
+        opc = ort.SessionOptions()
+        opc.intra_op_num_threads = max(1, min(4, os.cpu_count() or 1))
+        sess = ort.InferenceSession(os.path.join(d, "model.onnx"), opc, providers=["CPUExecutionProvider"])
+        tok = Tokenizer.from_file(os.path.join(d, "tokenizer.json"))
+        tok.enable_truncation(128)
+        meta = {"prefixo": "query: ", "limiar": LIMIAR_LIGAR}
+        try:
+            with open(os.path.join(d, "meta.json"), encoding="utf-8") as f:
+                meta.update(json.load(f))
+        except (OSError, ValueError):
+            pass
+        _tr.update(sess=sess, tok=tok, meta=meta)
+        return _tr
+    except Exception:
+        return None
+
+
+def motor():
+    """Qual rede está dando o significado agora: 'transformer', 'propria' ou None."""
+    if _transformer():
+        return "transformer"
+    return "propria" if carregar() else None
+
+
+def limiar():
+    t = _transformer()
+    return float(t["meta"].get("limiar", LIMIAR_LIGAR)) if t else LIMIAR_LIGAR
+
+
+def _arq_adaptador():
+    return M.base() / ".cerebro" / "significado_adaptador.npz" if M.ativo() else None
+
+
+def _adaptador(d):
+    raiz = str(M.base()) if M.ativo() else ""
+    if _tr["A"] is not None and _tr["A_raiz"] == raiz and _tr["A"].shape == (d, d):
+        return _tr["A"]
+    A = np.eye(d, dtype=np.float32)
+    arq = _arq_adaptador()
+    try:
+        if arq and arq.exists():
+            x = np.load(str(arq), allow_pickle=False)["A"].astype(np.float32)
+            if x.shape == (d, d):
+                A = x
+    except (OSError, ValueError, KeyError):
+        pass
+    _tr.update(A=A, A_raiz=raiz)
+    return A
+
+
+def _base_transformer(texto):
+    """Vetor do Transformer (média dos tokens, sem o adaptador), com cache."""
+    t = _transformer()
+    chave = " ".join(str(texto or "").split())[:300]
+    if not chave:
+        return None
+    c = t["cache"].get(chave)
+    if c is not None:
+        return c
+    enc = t["tok"].encode(t["meta"].get("prefixo", "") + chave.lower())
+    especiais = {x for x in enc.tokens if (x.startswith("[") and x.endswith("]")) or (x.startswith("<") and x.endswith(">"))}
+    if not [x for x in enc.tokens if x not in especiais and x.strip("▁") not in ("query", ":", "")]:
+        return None                                              # só token desconhecido: sem significado (senão dois «[UNK]» pareceriam iguais)
+    ids = np.array([enc.ids], dtype=np.int64)
+    mask = np.array([enc.attention_mask], dtype=np.int64)
+    entradas = {"input_ids": ids, "attention_mask": mask}
+    nomes = {i.name for i in t["sess"].get_inputs()}
+    if "token_type_ids" in nomes:
+        entradas["token_type_ids"] = np.zeros_like(ids)
+    h = t["sess"].run(None, {k: v for k, v in entradas.items() if k in nomes})[0][0]      # (tokens, d)
+    m = mask[0][:, None].astype(np.float32)
+    v = (h * m).sum(0) / max(1.0, float(m.sum()))
+    n = float(np.linalg.norm(v))
+    if n == 0:
+        return None
+    v = (v / n).astype(np.float32)
+    if len(t["cache"]) > 4096:
+        t["cache"].clear()
+    t["cache"][chave] = v
+    return v
+
+
 # ---------------------------------------------------------------- usar
 def vetor(texto):
+    if _transformer():
+        b = _base_transformer(texto)
+        if b is None:
+            return None
+        v = _adaptador(len(b)) @ b
+        n = float(np.linalg.norm(v))
+        return v / n if n > 0 else None
     if not carregar():
         return None
     ii = [_m["idx"][w] for w in palavras(texto) if w in _m["idx"]]
@@ -200,13 +311,13 @@ def _topicos():
 
 def ligar_por_significado(novos):
     """Assimilação: cada assunto novo se liga aos 2 assuntos que ela já conhece mais parecidos em SIGNIFICADO (sinapse semântica)."""
-    if not carregar() or not M.ativo():
+    if motor() is None or not M.ativo():
         return []
     import neuronios as N
     feitas = []
     conhecidos = [t for t in _topicos() if t not in novos]
     for a in novos:
-        for b, s in parecidos(a, conhecidos, n=2, minimo=LIMIAR_LIGAR):
+        for b, s in parecidos(a, conhecidos, n=2, minimo=limiar()):
             ka, kb = f"Topicos/{a}", f"Topicos/{b}"
             with N._trava:
                 e = N._estado()
@@ -267,8 +378,48 @@ def exemplos_de_ajuste(semente=11):
     return pares
 
 
+def _ajustar_adaptador(pares, epocas, lr, relatorio):
+    """Etapas 2/3 com o Transformer congelado: treina só o adaptador A (v' = A·v), salvo no cofre."""
+    base = {}
+    for a, b, _, _ in pares:
+        for x in (a, b):
+            if x not in base:
+                base[x] = _base_transformer(x)
+    pares = [p for p in pares if base[p[0]] is not None and base[p[1]] is not None]
+    if not pares:
+        return 0
+    d = len(next(iter(base.values())))
+    A = _adaptador(d).copy()
+    for ep in range(epocas):
+        perda = 0.0
+        for a, b, alvo, peso in pares:
+            xa, xb = base[a], base[b]
+            ya, yb = A @ xa, A @ xb
+            na, nb = float(np.linalg.norm(ya)) + 1e-9, float(np.linalg.norm(yb)) + 1e-9
+            ua, ub = ya / na, yb / nb
+            cos = float(ua @ ub)
+            p = 1 / (1 + np.exp(-(cos * 6 - 3)))                     # cosseno → probabilidade de «têm a ver»
+            perda += -peso * (alvo * np.log(p + 1e-9) + (1 - alvo) * np.log(1 - p + 1e-9))
+            g = peso * (p - alvo) * 6
+            ga = (ub - cos * ua) / na                                # derivada do cosseno em relação a ya
+            gb = (ua - cos * ub) / nb
+            A -= lr * g * (np.outer(ga, xa) + np.outer(gb, xb))
+        if relatorio:
+            relatorio(ep + 1, perda / len(pares))
+    arq = _arq_adaptador()
+    if arq:
+        arq.parent.mkdir(parents=True, exist_ok=True)
+        tmp = str(arq) + ".tmp.npz"
+        np.savez_compressed(tmp, A=A.astype(np.float32))
+        os.replace(tmp, str(arq))
+    _tr.update(A=A.astype(np.float32), A_raiz=str(M.base()) if M.ativo() else "")
+    return len(pares)
+
+
 def ajustar(epocas=30, lr=0.08, relatorio=None):
-    """Ajuste fino contrastivo nos vetores das palavras dos assuntos. Salva a versão dela no cofre. Devolve o nº de exemplos usados."""
+    """Ajuste fino contrastivo (etapas 2 e 3). Com Transformer: treina o adaptador dela; sem: os vetores das palavras. Salva no cofre."""
+    if _transformer():
+        return _ajustar_adaptador(exemplos_de_ajuste(), epocas, lr * 0.5, relatorio)
     if not carregar():
         return 0
     pares = [p for p in exemplos_de_ajuste() if vetor(p[0]) is not None and vetor(p[1]) is not None]
@@ -312,6 +463,8 @@ def tratar(texto):
     if m:
         if not disponivel():
             return "Minha rede de significado precisa do NumPy (no Termux: pkg install python-numpy)."
+        if motor() is None:
+            return "Minha rede de significado ainda não está treinada aqui."
         t = m.group("t")
         meus = parecidos(t, _topicos(), n=5, minimo=0.5)
         if meus:

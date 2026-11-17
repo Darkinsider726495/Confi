@@ -16,6 +16,25 @@ Tamanho da base: 2.706 palavras × 64 dimensões ≈ 173 mil parâmetros (um mod
 - **Ajuste sozinho:** a cada 6 h, no tempo ocioso, ela refaz a etapa 2/3 com as sinapses e o feedback novos.
 - A rede **só sugere ligações**: não decide nem executa nada.
 
+## Com um Transformer pré-treinado (opcional, recomendado)
+A etapa 1 pode vir **pronta** de um Transformer aberto, treinado com bilhões de palavras — como o pré-treino de um modelo grande:
+
+| | Rede própria (padrão) | Com Transformer |
+|---|---|---|
+| Etapa 1 | ela treina sozinha (skip-gram) | **multilingual-e5-small** (~118 milhões de parâmetros, já sabe português), **congelado** |
+| Etapas 2 e 3 | mexem nos vetores das palavras | treinam um **adaptador** dela (matriz d×d que começa na identidade), salvo no cofre (`.cerebro/significado_adaptador.npz`) |
+| Limiar para ligar | 0,80 | **calibrado na exportação** para aquele modelo (`meta.json`) |
+
+```bash
+# no PC ou no Google Colab (o celular não precisa baixar nem converter nada)
+pip install "optimum[onnxruntime]" transformers
+python scripts/exportar_transformer.py            # → modelos_ia/significado-transformer/ (~120 MB, 8 bits)
+# copie a pasta modelos_ia/ para friday-pi/ no aparelho e instale o que roda o modelo:
+pip install -r requirements-transformer.txt       # numpy, onnxruntime, tokenizers
+```
+A FRIDAY detecta a pasta sozinha (`motor()` passa a dizer `transformer`). Sem ela, ou sem `onnxruntime`/`tokenizers`, volta para a rede própria.
+Termo que o Transformer não reconhece (só «[UNK]») fica **sem significado** — nunca «parecido» com outro desconhecido (teste).
+
 ## Treinar
 ```bash
 python scripts/treinar_significado.py --base        # etapa 1 só com as docs → friday/significado_base.npz (pacote)
@@ -25,6 +44,8 @@ python scripts/treinar_significado.py --ajuste      # etapas 2 e 3 (ela também 
 No Termux precisa do NumPy: `pkg install python-numpy`. Sem ele, tudo isto fica desligado e a FRIDAY segue normal.
 
 ## Limites honestos
+- O script de exportação não foi executado neste ambiente (o Hugging Face é bloqueado aqui); o motor que roda o modelo foi testado com um Transformer de teste no mesmo formato ONNX (`tests/test_significado_transformer.py`).
+- `onnxruntime` e `tokenizers` instalam direto num PC/Linux (inclusive Kali). No Termux podem não ter versão pronta para Android; se não instalarem, ela segue com a rede própria.
 - A base foi treinada com só ~35 mil palavras (as docs): palavras raras nelas («treino») ainda saem com vizinhos ruins. O pré-treino no aparelho, com o cofre dela, é que dá o vocabulário do dono.
 - O modelo pessoal (`.cerebro/significado.npz`) é derivado da memória dela: fica no cofre, nunca no git.
 
