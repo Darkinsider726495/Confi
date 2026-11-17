@@ -1,0 +1,92 @@
+--- a/termux/supervisor.sh
++++ b/termux/supervisor.sh
+@@ -5,7 +5,21 @@
+ cd "$DIR" || exit 1
+ LOG="${FRIDAY_LOG:-$HOME/friday.log}"
+ export FRIDAY_HEARTBEAT="${FRIDAY_HEARTBEAT:-$DIR/friday/.heartbeat}"
+-PORTA="${HUD_PORTA:-8080}"
++# Lê apenas atribuições simples do .env; não executa o arquivo como código shell.
++ler_env() {
++  [ -r "$DIR/.env" ] || return 0
++  while IFS= read -r linha || [ -n "$linha" ]; do
++    case "$linha" in
++      "$1"=*) printf '%s' "${linha#*=}"; return 0 ;;
++    esac
++  done < "$DIR/.env"
++}
++HUD_PORTA="${HUD_PORTA:-$(ler_env HUD_PORTA)}"
++PORTA="${HUD_PORTA:-8081}"
++case "$PORTA" in
++  ''|*[!0-9]*) PORTA=8081 ;;
++esac
++if [ "$PORTA" -lt 1 ] || [ "$PORTA" -gt 65535 ]; then PORTA=8081; fi
+ CHECK="${CHECK_INTERVAL:-30}"; STALE="${STALE_SEGUNDOS:-180}"; GRACE="${GRACE_SEGUNDOS:-120}"
+ PY="${FRIDAY_PY:-python}"; ARGS="${FRIDAY_ARGS:-friday/main.py --android}"
+ PIDF="${FRIDAY_PIDFILE:-$DIR/.supervisor.pid}"
+@@ -20,7 +34,7 @@
+ log() { echo "[$(date '+%F %T')] supervisor: $*" >> "$LOG"; }
+ 
+ # IA local (Ollama): só sobe se OLLAMA_AUTOSTART=1 (no ambiente ou no .env; o instalar-ollama.sh liga isso) e o programa existir.
+-quer_ollama() { [ "${OLLAMA_AUTOSTART:-}" = 1 ] || grep -qs '^OLLAMA_AUTOSTART=1' "$DIR/.env"; }
++quer_ollama() { [ "${OLLAMA_AUTOSTART:-$(ler_env OLLAMA_AUTOSTART)}" = 1 ]; }
+ ollama_garante() {
+   quer_ollama || return 0
+   command -v "$OLLAMA_CMD" >/dev/null 2>&1 || return 0
+--- a/friday/main.py
++++ b/friday/main.py
+@@ -493,7 +493,7 @@
+     ANDROID = "--android" in sys.argv
+     teclado = "--teclado" in sys.argv
+     TOKEN = carregar_token()
+-    porta = int(os.getenv("HUD_PORTA", "8080"))
++    porta = int(os.getenv("HUD_PORTA", "8081"))
+     link = f"http://127.0.0.1:{porta}/#t={TOKEN}"
+     if "--link" in sys.argv:
+         return print(link)
+--- a/friday/diagnostico.py
++++ b/friday/diagnostico.py
+@@ -88,7 +88,7 @@
+     linha("✔" if os.getenv("NTFY_URL") else "•", "Push (ntfy)", "configurado" if os.getenv("NTFY_URL") else "opcional, não configurado")
+     linha("✔" if os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")) else "•", "Leads (Supabase)", "configurado" if os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY") else "opcional, não configurado")
+     linha("•", "Horário de silêncio", os.getenv("SILENCIO") or "não definido (ela fala a qualquer hora)")
+-    porta = int(os.getenv("HUD_PORTA", "8080"))
++    porta = int(os.getenv("HUD_PORTA", "8081"))
+     with socket.socket() as s:
+         livre = s.connect_ex(("127.0.0.1", porta)) != 0
+     linha("✔" if livre else "•", f"Porta do painel {porta}", "livre" if livre else "em uso (a FRIDAY já está rodando?)")
+--- a/friday/acao.sh
++++ b/friday/acao.sh
+@@ -6,4 +6,4 @@
+ ID=$(printf '%s' "${2:-}" | tr -cd '0-9a-f')
+ CORPO='{}'
+ [ -n "$ID" ] && CORPO="{\"id\":\"$ID\"}"
+-exec curl -s -m 60 -X POST -H "X-Friday-Token: $TOK" -H 'Content-Type: application/json' -d "$CORPO" "http://127.0.0.1:${HUD_PORTA:-8080}/$1" >/dev/null
++exec curl -s -m 60 -X POST -H "X-Friday-Token: $TOK" -H 'Content-Type: application/json' -d "$CORPO" "http://127.0.0.1:${HUD_PORTA:-8081}/$1" >/dev/null
+--- a/android/src/br/friday/painel/Principal.java
++++ b/android/src/br/friday/painel/Principal.java
+@@ -27,12 +27,12 @@
+ import java.util.ArrayList;
+ 
+ /**
+- * Janela da FRIDAY: abre o painel que a própria FRIDAY serve no Termux (http://127.0.0.1:8080).
++ * Janela da FRIDAY: abre o painel que a própria FRIDAY serve no Termux (http://127.0.0.1:8081).
+  * Este app NÃO contém a FRIDAY: ela continua rodando no Termux. Aqui só há uma tela cheia para o painel,
+  * com microfone e câmera liberados apenas para o endereço configurado (o celular pergunta antes).
+  */
+ public class Principal extends Activity {
+-    private static final String PADRAO = "http://127.0.0.1:8080/";
++    private static final String PADRAO = "http://127.0.0.1:8081/";
+     private static final int PEDIDO_PERMISSAO = 7;
+     private WebView web;
+     private PermissionRequest pendente;
+--- a/docs/ANDROID.md
++++ b/docs/ANDROID.md
+@@ -33,7 +33,7 @@
+ 9. Teste de reinício: reinicie o celular, espere 1 a 2 minutos e veja se a notificação voltou.
+ 
+ ## App FRIDAY (janela do painel, opcional)
+-O `friday-painel.apk` abre o painel da FRIDAY (`http://127.0.0.1:8080`) em tela cheia, como um app, com microfone e câmera liberados só para esse endereço. **Ele não substitui o Termux:** a FRIDAY precisa estar rodando lá (passos acima).
++O `friday-painel.apk` abre o painel da FRIDAY (`http://127.0.0.1:8081`) em tela cheia, como um app, com microfone e câmera liberados só para esse endereço. **Ele não substitui o Termux:** a FRIDAY precisa estar rodando lá (passos acima).
+ 1. Copie o `friday-painel.apk` para o celular e toque nele. O Android pede para permitir «instalar apps desconhecidos» para o app que abriu o arquivo (Arquivos/Chrome): permita só para essa instalação. O Play Protect pode avisar que o app é de desenvolvedor desconhecido e foi feito para uma versão antiga do Android (alvo: Android 6): isso é esperado num app feito por você; toque em «Instalar mesmo assim».
+ 2. Toque na notificação **«FRIDAY online»** e, se o Android perguntar com qual app abrir, escolha **FRIDAY**. Ou abra o app e cole o link da notificação (termina com `#t=…`, que é a chave do painel).
+ 3. Na primeira vez que o painel pedir microfone ou câmera, o Android pergunta: permita se quiser falar com ela ou usar os olhos e as mãos.

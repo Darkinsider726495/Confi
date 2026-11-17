@@ -1,0 +1,5 @@
+# Busca semântica (RAG) da memória — OPCIONAL, só no servidor/PC (pesado).
+# Instale com:  .venv/bin/pip install -r requirements-rag.txt
+# Depois, no Ollama, baixe o modelo de embedding:  ollama pull bge-m3
+# O LLM do grafo usa o mesmo OLLAMA_MODEL (padrão llama3.2:3b).
+lightrag-hku>=1.5,<2

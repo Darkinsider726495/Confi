@@ -1,0 +1,7 @@
+# Servidor de voz da FRIDAY (rode em um venv: bash instalar-voz.sh)
+faster-whisper>=1.1.0
+kokoro>=0.9.4
+soundfile
+numpy
+# Sem GPU, instale antes o PyTorch só de CPU (muito menor):  pip install torch --index-url https://download.pytorch.org/whl/cpu
+# Sistema (Debian/Ubuntu): sudo apt install espeak-ng      (a pronúncia em português do Kokoro depende dele)

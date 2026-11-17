@@ -1,0 +1,32 @@
+{
+  "trabalho": {
+    "desc": "Começa o expediente: foco curto e relatório.",
+    "apelidos": [
+      "modo trabalho",
+      "hora de trabalhar"
+    ],
+    "passos": [
+      {
+        "ferramenta": "silenciar",
+        "args": {
+          "minutos": 120
+        }
+      },
+      {
+        "falar": "Modo trabalho, @tratamento. Silêncio por duas horas. Aviso só o que for crítico."
+      }
+    ]
+  },
+  "sair": {
+    "desc": "Prepara a saída de casa: clima e briefing.",
+    "apelidos": [
+      "vou sair",
+      "estou saindo"
+    ],
+    "passos": [
+      {
+        "falar": "@briefing"
+      }
+    ]
+  }
+}

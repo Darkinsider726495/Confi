@@ -1,0 +1,20 @@
+[Unit]
+Description=Servidor de voz privado da FRIDAY (faster-whisper + Kokoro)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=__USUARIO__
+WorkingDirectory=__DIR__
+EnvironmentFile=__DIR__/.env
+ExecStart=__DIR__/.venv/bin/python __DIR__/servidor_voz.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=__DIR__
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

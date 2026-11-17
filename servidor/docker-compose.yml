@@ -1,0 +1,93 @@
+# Pilha do servidor privado da FRIDAY (mini PC / Pi 5 com SSD).
+#   cd servidor && cp .env.example .env && nano .env && bash instalar.sh
+#
+# Princípios: nenhuma porta aberta para a internet; painéis só no IP do Tailscale (PAINEL_IP);
+# só o DNS (AdGuard) escuta na rede local; nenhum container recebe o socket do Docker.
+name: friday-servidor
+
+x-base: &base
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  # DNS da casa: bloqueia rastreadores e domínios maliciosos para todos os dispositivos.
+  # Depois de subir, abra http://PAINEL_IP:3000 e, no assistente, deixe a interface web na porta 80.
+  adguard:
+    <<: *base
+    container_name: friday-adguard
+    image: ${IMG_ADGUARD:-adguard/adguardhome:latest}
+    ports:
+      - "${LAN_IP:?Defina LAN_IP no .env (IP fixo do servidor na rede local)}:53:53/tcp"
+      - "${LAN_IP}:53:53/udp"
+      - "${PAINEL_IP:-127.0.0.1}:3000:3000/tcp"   # assistente de configuração inicial
+      - "${PAINEL_IP:-127.0.0.1}:8053:80/tcp"     # painel depois da configuração
+    volumes:
+      - ./dados/adguard/work:/opt/adguardhome/work
+      - ./dados/adguard/conf:/opt/adguardhome/conf
+
+  # Monitor de disponibilidade: avisa no celular (ntfy) quando algo cai.
+  uptime-kuma:
+    <<: *base
+    container_name: friday-kuma
+    image: ${IMG_KUMA:-louislam/uptime-kuma:1}
+    ports:
+      - "${PAINEL_IP:-127.0.0.1}:3001:3001"
+    volumes:
+      - ./dados/kuma:/app/data
+
+  # Notificações push privadas (a FRIDAY e o backup avisam por aqui). Acesso negado por padrão: exige usuário/token.
+  ntfy:
+    <<: *base
+    container_name: friday-ntfy
+    image: ${IMG_NTFY:-binwiederhier/ntfy:latest}
+    command: ["serve"]
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      NTFY_BASE_URL: ${NTFY_BASE_URL:-http://localhost:2586}
+      NTFY_LISTEN_HTTP: ":80"
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      NTFY_AUTH_FILE: /var/lib/ntfy/user.db
+      NTFY_AUTH_DEFAULT_ACCESS: deny-all
+    ports:
+      - "${PAINEL_IP:-127.0.0.1}:2586:80"
+    volumes:
+      - ./dados/ntfy/cache:/var/cache/ntfy
+      - ./dados/ntfy/lib:/var/lib/ntfy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 --spider http://localhost:80/v1/health || exit 1"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  # LLM local (reserva sem internet e para dados que não devem ir para a nuvem).
+  # Baixe um modelo depois de subir:  docker exec friday-ollama ollama pull llama3.2:3b
+  # GPU NVIDIA: instale o NVIDIA Container Toolkit e descomente o bloco "devices" abaixo.
+  ollama:
+    <<: *base
+    container_name: friday-ollama
+    image: ${IMG_OLLAMA:-ollama/ollama:latest}
+    ports:
+      - "${OLLAMA_BIND:-127.0.0.1}:11434:11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+    volumes:
+      - ./dados/ollama:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEM:-20g}
+        # reservations:
+        #   devices:
+        #     - driver: nvidia
+        #       count: all
+        #       capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

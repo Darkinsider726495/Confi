@@ -1,0 +1,10 @@
+FRIDAY — INÍCIO RÁPIDO
+
+ANDROID (TERMUX): leia EXECUTAR_FRIDAY_TERMUX.txt e rode `bash EXECUTAR_FRIDAY.sh`.
+LINUX: rode `bash EXECUTAR_FRIDAY.sh`.
+WINDOWS: rode `EXECUTAR_FRIDAY.bat` (requer Python 3 instalado).
+
+O inicializador oferece menu para iniciar a assistente, iniciar a API híbrida,
+executar diagnóstico ou instalar dependências. Ele não executa comandos de sistema
+ocultos, não cria persistência no boot e não copia código para outros dispositivos.
+Configure segredos apenas no .env local; nunca os publique.

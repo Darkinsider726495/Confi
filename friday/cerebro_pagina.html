@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02050a"><title>Cérebro da FRIDAY</title>
+<style>
+:root{--fundo:#02050a;--acc:#4fd1ff;--txt:#d6e6f5;--mut:#7d93aa;--vidro:rgba(6,14,26,.72);--lin:rgba(120,180,230,.22);--mono:ui-monospace,Menlo,Consolas,"SF Mono",monospace}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--fundo);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}canvas:active{cursor:grabbing}
+.ui{position:fixed;left:0;right:0;pointer-events:none;padding:0 16px;transition:opacity .6s}.ui>*{pointer-events:auto}
+#topo{top:max(14px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#marca b{display:block;font:600 15px var(--mono);letter-spacing:.42em;color:#eaf6ff;text-shadow:0 0 14px rgba(79,209,255,.55)}
+#marca span{font:11px var(--mono);letter-spacing:.12em;color:var(--mut);text-transform:uppercase}
+#num{display:flex;gap:16px;text-align:right}#num div{font:300 24px var(--mono);color:#eaf6ff;line-height:1}#num small{display:block;margin-top:4px;font:10px var(--mono);letter-spacing:.14em;color:var(--mut)}
+#busca{top:calc(max(14px,env(safe-area-inset-top)) + 58px);display:flex;gap:8px;align-items:center}
+#q{flex:1;min-width:0;background:var(--vidro);border:1px solid var(--lin);border-radius:10px;color:var(--txt);padding:10px 12px;font:13px var(--mono);outline:none;backdrop-filter:blur(8px)}#q:focus{border-color:var(--acc)}
+.b{background:var(--vidro);border:1px solid var(--lin);color:var(--txt);border-radius:10px;padding:10px 12px;font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(8px)}.b.on{border-color:var(--acc);color:#fff;box-shadow:0 0 14px rgba(79,209,255,.35)}
+#info{bottom:calc(86px + env(safe-area-inset-bottom));display:none}#info>div{max-width:560px;margin:0 auto;background:var(--vidro);border:1px solid var(--lin);border-radius:12px;padding:12px 14px;backdrop-filter:blur(10px)}
+#info h2{margin:0 0 2px;font:600 15px var(--mono);color:#fff}#info small{font:11px var(--mono);letter-spacing:.1em;color:var(--mut);text-transform:uppercase}#info p{margin:8px 0 0;color:var(--txt)}
+#leg{bottom:max(12px,env(safe-area-inset-bottom));display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;justify-content:center;flex-wrap:wrap}#leg::-webkit-scrollbar{display:none}
+.ch{display:inline-flex;align-items:center;gap:7px;background:var(--vidro);border:1px solid var(--lin);border-radius:99px;padding:5px 10px;font:11px var(--mono);color:var(--txt);white-space:nowrap;backdrop-filter:blur(8px)}.ch i{width:9px;height:9px;border-radius:50%;box-shadow:0 0 9px currentColor;background:currentColor}.ch.vazio{opacity:.55}
+#nota{position:fixed;left:16px;right:16px;top:calc(max(14px,env(safe-area-inset-top)) + 124px);text-align:center;font:600 13px var(--mono);letter-spacing:.1em;color:#cfe6fa;text-transform:uppercase;pointer-events:none;text-shadow:0 0 10px #000,0 0 3px #000}
+body.limpo .ui{opacity:0;pointer-events:none}body.limpo .ui>*{pointer-events:none}
+@media(max-width:560px){#num{gap:10px}#num div{font-size:19px}.b{padding:10px}#marca b{letter-spacing:.3em}}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="ui" id="topo"><div id="marca"><b>FRIDAY</b><span>cérebro · memória no Obsidian</span></div><div id="num"><div id="nn">0<small>NEURÔNIOS</small></div><div id="ns">0<small>SINAPSES</small></div></div></div>
+<div class="ui" id="busca"><input id="q" type="search" placeholder="Buscar neurônio…" autocomplete="off" aria-label="Buscar neurônio"><button class="b on" id="bm" type="button">Regiões</button><button class="b" id="bc" type="button">Cinema</button></div>
+<div class="ui" id="info"><div><small id="ig"></small><h2 id="it"></h2><p id="is"></p></div></div>
+<div id="nota"></div>
+<div class="ui" id="leg"></div>
+<script>/*@JS@*/</script>
+<script>
+const DADOS=/*@DADOS@*/;
+(function(){
+const $=i=>document.getElementById(i),P=new URLSearchParams(location.search),LIM=P.has('limpo');
+if(LIM)document.body.classList.add('limpo');
+const reduz=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let C;
+const sel=n=>{const b=$('info');if(!n){b.style.display='none';return}b.style.display='block';const rg=C&&C.S.reg&&C.S.reg[n.rg];$('ig').textContent=(Cerebro3D.NOME[n.g]||n.g)+(rg?' · '+rg.nome:'')+' · '+(n.uso?n.uso+' uso(s) · ':'')+n.deg+' ligação(ões)';$('it').textContent=n.t;$('is').textContent=n.s||''};
+function leg(){$('leg').replaceChildren(...C.legenda().map(l=>{const s=document.createElement('span'),i=document.createElement('i');s.className='ch'+(l.vazio?' vazio':'');i.style.color='rgb('+l.cor+')';s.append(i,l.nome+(l.vazio?' · vazio':' '+l.n));return s}));
+  const b=$('bm');b.style.display=C.S.temReg?'':'none';b.className='b'+(C.S.modo=='regiao'?' on':'');b.textContent=C.S.modo=='regiao'?'Regiões':'Tipos'}
+C=Cerebro3D.criar($('c'),{reduzido:reduz,manual:P.has('manual'),modo:P.get('modo')==='tipo'?'tipo':undefined,cb:{selecionar:sel,modo:leg}});
+window.__C=C;window.__DADOS=DADOS;
+function conta(g){$('nn').firstChild.textContent=g.stats.neuronios;$('ns').firstChild.textContent=g.stats.sinapses}
+conta(DADOS);C.carregar(DADOS,{sem_entrada:P.has('sem_entrada')});
+leg();
+$('bm').onclick=()=>C.modo(C.S.modo=='regiao'?'tipo':'regiao');
+$('q').addEventListener('input',e=>{C.buscar(e.target.value)});
+let cin=false;$('bc').onclick=()=>{cin=!cin;C.cinema(cin);$('bc').className='b'+(cin?' on':'')};
+if(P.get('cinema')==='1'){cin=true;C.cinema(true);$('bc').className='b on'}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){C.selecionar(-1);sel(null)}});
+const nota=P.get('nota');if(nota)$('nota').textContent=nota;
+})();
+</script></body></html>

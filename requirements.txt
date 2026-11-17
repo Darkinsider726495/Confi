@@ -1,0 +1,9 @@
+requests
+python-dotenv
+numpy
+sounddevice
+faster-whisper
+openwakeword
+piper-tts
+gpiozero
+pillow

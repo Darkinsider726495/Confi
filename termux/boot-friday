@@ -1,0 +1,4 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# O Termux:Boot executa este arquivo quando o celular liga. (instalar-termux.sh copia para ~/.termux/boot/friday)
+termux-wake-lock
+nohup bash "__DIR__/termux/supervisor.sh" >/dev/null 2>&1 &

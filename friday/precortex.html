@@ -1,0 +1,290 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#02060c"><title>FRIDAY · Pré-córtex</title>
+<style>
+:root{--acc:#4fd1ff;--acc2:#a8ecff;--dim:#17475a;--grid:#0e2a38;--txt:#d6ecf5;--mut:#7fa3b3;--bg:#02060c;--pan:#04111bcc;--ok:#3ecf8e;--warn:#f5a524;--bad:#ff5468;--blq:#c58cff;
+--mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,"Roboto Mono",monospace;--ui:"Segoe UI",Inter,system-ui,sans-serif}
+*{box-sizing:border-box}html{background:var(--bg)}
+body{margin:0;min-height:100vh;color:var(--txt);font:14px var(--ui);padding:12px 16px 28px;background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/46px 46px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/46px 46px,var(--bg);background-attachment:fixed;overflow-x:hidden}
+header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;max-width:1500px;margin:0 auto 12px;padding-bottom:10px;border-bottom:1px solid var(--dim)}
+.marca b{font-weight:300;font-size:20px;letter-spacing:.42em;color:var(--acc);text-shadow:0 0 14px #4fd1ff88}.marca span{display:block;font:11px var(--mono);letter-spacing:.2em;color:var(--mut);margin-top:2px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;font:11px var(--mono)}.tag{border:1px solid var(--dim);padding:3px 8px;border-radius:999px;color:var(--mut)}.tag b{color:var(--txt);font-weight:600}
+.luz{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mut);margin-right:6px;vertical-align:middle}.luz.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}.luz.warn{background:var(--warn);box-shadow:0 0 8px var(--warn)}.luz.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+main{max-width:1500px;margin:auto;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);gap:12px}
+.full{grid-column:1/-1}.c2{grid-column:span 2}
+@media(max-width:1180px){main{grid-template-columns:1fr 1fr}.c2{grid-column:1/-1}}
+@media(max-width:760px){main{grid-template-columns:1fr}.c2{grid-column:auto}body{padding:10px}}
+.pnl{position:relative;background:var(--pan);border:1px solid var(--dim);padding:12px 14px;min-width:0}
+.pnl::before,.pnl::after{content:"";position:absolute;width:12px;height:12px;border:2px solid var(--acc)}.pnl::before{top:-1px;left:-1px;border-right:0;border-bottom:0}.pnl::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.pnl h3{margin:0 0 10px;font:600 11px var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--acc);display:flex;justify-content:space-between;gap:8px;align-items:baseline}.pnl h3 small{font-weight:400;color:var(--mut);letter-spacing:.08em;text-transform:none}
+.s{color:var(--mut);font-size:12px;line-height:1.5}.mono{font-family:var(--mono)}.vazio{color:var(--mut);font-style:italic;font-size:12px}
+ul{margin:0;padding:0;list-style:none}li{padding:5px 0;border-top:1px solid #17475a88;font-size:12.5px;line-height:1.45}li:first-child{border-top:0}
+textarea{width:100%;min-height:62px;resize:vertical;padding:9px 11px;border:1px solid var(--dim);background:#00000099;color:var(--txt);font:inherit;border-radius:2px;outline:0}textarea:focus{border-color:var(--acc)}
+button{background:#43b2d9;color:#02080c;border:0;border-radius:2px;padding:8px 14px;font:700 12px var(--ui);letter-spacing:.05em;cursor:pointer;margin:3px 4px 3px 0}button:hover{filter:brightness(1.15)}button:disabled{opacity:.45;cursor:default}
+button.x{background:transparent;color:var(--acc);box-shadow:inset 0 0 0 1px var(--dim)}button.alerta{background:var(--warn)}button.ruim{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1px #ff546888}
+label{font-size:12px;color:var(--mut);margin-right:12px}
+.linha{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:6px}
+/* A: mapa */
+#mapa{width:100%;height:auto;display:block}
+#mapa .ar{stroke:var(--dim);stroke-width:1.6;fill:none}#mapa .ar.tr{stroke-dasharray:5 5}#mapa .ar.mon{stroke-dasharray:2 5;opacity:.5}#mapa .ar.viva{stroke:var(--acc);stroke-width:2.4;filter:drop-shadow(0 0 4px var(--acc))}
+#mapa .no circle.anel{fill:#02101a;stroke-width:3}#mapa .no text{fill:var(--txt);font:600 14px var(--mono);text-anchor:middle;dominant-baseline:central}
+#mapa .no text.nm{font:600 11px var(--mono);fill:var(--txt)}#mapa .no text.st{font:10px var(--mono)}#mapa .no text.wk{font:9.5px var(--mono);fill:var(--mut)}
+.no[data-estado=ocioso] .anel{stroke:#3d6170}.no[data-estado=ocioso] .st{fill:var(--mut)}
+.no[data-estado=recebendo] .anel{stroke:var(--acc2)}.no[data-estado=recebendo] .st{fill:var(--acc2)}
+.no[data-estado=processando] .anel{stroke:var(--acc);filter:drop-shadow(0 0 6px var(--acc))}.no[data-estado=processando] .st{fill:var(--acc)}
+.no[data-estado=aguardando] .anel{stroke:var(--warn)}.no[data-estado=aguardando] .st{fill:var(--warn)}
+.no[data-estado=concluido] .anel{stroke:var(--ok)}.no[data-estado=concluido] .st{fill:var(--ok)}
+.no[data-estado=bloqueado] .anel{stroke:var(--blq);stroke-dasharray:6 4}.no[data-estado=bloqueado] .st{fill:var(--blq)}
+.no[data-estado=erro] .anel{stroke:var(--bad)}.no[data-estado=erro] .st{fill:var(--bad)}
+@media(prefers-reduced-motion:no-preference){.no[data-estado=processando] .anel{animation:pulso 1s ease-in-out infinite}}
+@keyframes pulso{50%{stroke-width:5}}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:11px var(--mono);color:var(--mut);margin-top:6px}.leg i{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid;margin-right:5px;vertical-align:-1px}
+/* chips de fase e estados */
+.fases{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}.fase{font:10.5px var(--mono);padding:3px 7px;border:1px solid var(--dim);color:var(--mut);border-radius:2px}.fase.concluida{border-color:#3ecf8e88;color:var(--ok)}.fase.atual{border-color:var(--acc);color:var(--acc);box-shadow:0 0 8px #4fd1ff55}
+.est{font:10.5px var(--mono);padding:1px 6px;border-radius:2px;border:1px solid currentColor;white-space:nowrap}
+.e-concluida,.e-concluido,.e-sucesso,.e-aprovado,.e-ok{color:var(--ok)}.e-falhou,.e-falha_total,.e-parcial,.e-rejeitado,.e-erro,.e-cancelado{color:var(--bad)}.e-atual,.e-em_andamento,.e-recebido{color:var(--acc)}
+.e-aguardando,.e-aguardando_autorizacao,.e-aguardando_confirmacao_do_corretor,.e-aguardando_aceite,.e-precisa_do_dono,.e-devolvido,.e-inconclusiva,.e-plano_pronto{color:var(--warn)}.e-pendente{color:var(--mut)}.e-bloqueado{color:var(--blq)}
+.etapa{display:grid;grid-template-columns:2.4em 1fr auto;gap:6px;align-items:start}.etapa .dep{color:var(--mut);font:10.5px var(--mono)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px}.kv dt{color:var(--mut);font:11px var(--mono);padding-top:2px}.kv dd{margin:0}
+.bar{height:6px;background:#17475a99;position:relative;margin-top:3px}.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc)}.bar i.q{background:var(--warn)}
+.hip{border:1px solid var(--dim);padding:8px 10px;margin-bottom:8px}.hip.escolhida{border-color:var(--acc);box-shadow:0 0 10px #4fd1ff33}.hip h4{margin:0 0 4px;font:600 12.5px var(--mono);display:flex;justify-content:space-between;gap:6px}
+.tipo{font:10px var(--mono);padding:0 5px;border-radius:2px;margin-right:4px;border:1px solid}.t-fato{color:var(--ok)}.t-inferencia{color:var(--acc)}.t-hipotese{color:var(--warn)}.t-desconhecido,.t-incerteza{color:var(--blq)}
+#fluxo{max-height:460px;overflow:auto;font:11.5px/1.45 var(--mono)}#fluxo li{display:grid;grid-template-columns:3.8em 9.5em 1fr;gap:6px;font:11.5px/1.45 var(--mono)}#fluxo .sq{color:var(--mut)}#fluxo .tp{color:var(--acc)}
+#fluxo li.msg .tp{color:var(--mut)}#fluxo li.ruim .tp{color:var(--bad)}#fluxo li.bom .tp{color:var(--ok)}#fluxo li.dono .tp{color:var(--warn)}
+details{border-top:1px solid #17475a88;padding:5px 0}details:first-of-type{border-top:0}summary{cursor:pointer;font-size:12.5px}summary b{color:var(--acc);font:600 11px var(--mono);margin-right:6px}
+details ul{margin:6px 0 2px 14px}details .fonte{color:var(--mut);font:10px var(--mono)}
+.aut{border:1px solid var(--warn);background:#1b1203cc;padding:10px;margin:8px 0}
+.alerta-g{color:var(--bad)}.alerta-a{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font:11.5px var(--mono)}td,th{padding:4px 5px;border-top:1px solid #17475a88;text-align:left;vertical-align:top}th{color:var(--mut);font-weight:400}
+.obj{cursor:pointer}.obj.sel{color:var(--acc)}
+#c3{width:100%;height:440px;display:block;cursor:grab;background:radial-gradient(ellipse at 50% 45%,#0a2a3a55,transparent 70%)}#c3:active{cursor:grabbing}
+.c3leg{display:flex;flex-wrap:wrap;gap:4px 14px;font:11px var(--mono);color:var(--mut);margin-top:6px}
+#sc{display:none;max-width:520px;margin:30vh auto;text-align:center;color:var(--mut)}
+</style>
+<body>
+<div id="sc"><h2 style="color:var(--acc);font-weight:300;letter-spacing:.3em">PRÉ-CÓRTEX</h2><p>Abra esta página pelo link com a chave (…/precortex#t=…), igual ao painel da FRIDAY. Sem a chave, nenhum dado é mostrado.</p></div>
+<div id="app">
+<header><div class="marca"><b>PRÉ-CÓRTEX</b><span>FRIDAY · neurônios de software em rede</span></div>
+<div class="tags" id="tags"></div>
+<div class="tags"><span class="tag" id="conexao"><span class="luz" id="luz"></span><span id="contxt">conectando…</span></span><a class="tag" href="/" style="color:var(--acc);text-decoration:none">painel</a></div></header>
+<main>
+<!-- H: entrada e controles -->
+<section class="pnl full" id="pH"><h3>Objetivo <small>H · entrada e controle — nada com efeito fora do aparelho acontece sem a sua autorização</small></h3>
+<textarea id="txt" maxlength="1000" placeholder="Ex.: Monte um plano de estudos de Python para 4 semanas, com no máximo 90 minutos por dia, e guarde">Monte um plano de estudos de Python para 4 semanas, com no máximo 90 minutos por dia, e guarde</textarea>
+<div class="linha"><button id="bIniciar" onclick="iniciar()">Iniciar</button><label><input type="checkbox" id="soPlan"> só planejar (não executa nada)</label>
+<button class="x" id="bInterromper" onclick="interromper()" title="Cancela os objetivos em andamento (cooperativo). Não para a FRIDAY nem os trabalhadores.">Interromper a demonstração</button>
+<button class="x" id="bLimpar" onclick="limpar()" title="Arquiva os dossiês e eventos temporários. Experiências e memórias permanentes não são tocadas.">Limpar estado temporário</button>
+<span class="s" id="msg"></span></div></section>
+
+<!-- A3: cérebro em 3D -->
+<section class="pnl full" id="pA3"><h3>Cérebro em 3D, ao vivo <small>cada pulso é uma mensagem real entre o hub e um neurônio · o brilho é o estado real · arraste para girar</small></h3>
+<canvas id="c3" aria-label="Cérebro em 3D com os nove neurônios e as mensagens entre eles"></canvas>
+<div class="c3leg"><span id="c3info">aguardando mensagens…</span><span>Onde cada neurônio fica no desenho é uma metáfora de organização (ex.: planejamento na frente, percepção atrás), não anatomia real.</span></div></section>
+
+<!-- A: mapa -->
+<section class="pnl" id="pA"><h3>Mapa dos neurônios <small>A · estados reais vindos dos trabalhadores</small></h3>
+<svg id="mapa" viewBox="0 0 600 382" role="img" aria-label="Mapa dos nove neurônios e seus estados"></svg>
+<div class="leg" id="leg"></div><div class="s mono" id="ultmsg" style="margin-top:6px"></div></section>
+
+<!-- B: objetivo -->
+<section class="pnl" id="pB"><h3>Objetivo atual <small id="bId">B</small></h3><div id="obj" class="vazio">Nenhum objetivo ainda.</div></section>
+
+<!-- C: fluxo -->
+<section class="pnl" id="pC"><h3>Fluxo de eventos <small><label style="margin:0"><input type="checkbox" id="soSel" checked> só o objetivo selecionado</label></small></h3><ul id="fluxo"></ul></section>
+
+<!-- D: hipóteses -->
+<section class="pnl" id="pD"><h3>Hipóteses <small>D · confiança é contagem, não probabilidade calibrada</small></h3><div id="hip" class="vazio">—</div></section>
+
+<!-- E: planejamento -->
+<section class="pnl" id="pE"><h3>Planejamento <small id="eV">E</small></h3><div id="plan" class="vazio">—</div></section>
+
+<!-- F: aprendizagem -->
+<section class="pnl" id="pF"><h3>Aprendizagem <small>F · esperado × observado</small></h3><div id="apr" class="vazio">—</div></section>
+
+<!-- 12 perguntas -->
+<section class="pnl c2" id="pQ"><h3>Raciocínio operacional <small>as 12 perguntas, respondidas só com dados do dossiê</small></h3><div id="perg" class="vazio">—</div></section>
+
+<!-- G: operacional -->
+<section class="pnl" id="pG"><h3>Estado operacional <small id="gModo">G</small></h3><div id="oper" class="vazio">—</div></section>
+
+<section class="pnl full" id="pL"><h3>Objetivos registrados <small>clique para selecionar</small></h3><ul id="objs"></ul></section>
+</main></div>
+<script>
+const $=i=>document.getElementById(i);
+let T='';try{const m=location.hash.match(/t=([\w-]+)/);if(m){T=m[1];try{localStorage.setItem('friday_t',T)}catch(_){}history.replaceState(null,'',location.pathname+location.search)}else{try{T=localStorage.getItem('friday_t')||''}catch(_){}}}catch(_){}
+addEventListener('hashchange',()=>{if(/t=[\w-]+/.test(location.hash))location.reload()});
+if(!T){$('app').style.display='none';$('sc').style.display='block'}
+const E=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const N=(x,d=2)=>x==null?'—':Number(x).toLocaleString('pt-BR',{maximumFractionDigits:d});
+let SEL=null,SEQ=0,ULT=null,FALHAS=0,ABERTAS=new Set([1,9,11,12]),EVENTOS=[];
+async function api(u,d){const o=d===undefined?{headers:{'X-Friday-Token':T}}:{method:'POST',headers:{'X-Friday-Token':T,'Content-Type':'application/json'},body:JSON.stringify(d)};
+  const r=await fetch(u,o);let j=null;try{j=await r.json()}catch(_){}if(r.status===401){conexao('bad','chave inválida');throw new Error('401')}return j||{ok:false}}
+function conexao(c,t){$('luz').className='luz '+c;$('contxt').textContent=t}
+// ---------- A: mapa (posições fixas; o estado vem do servidor) ----------
+const POS={percepcao:[70,70],contexto:[220,70],hipoteses:[370,70],planejamento:[520,70],critica:[520,215],coordenacao:[370,215],verificador:[220,215],aprendizagem:[70,215],monitor:[295,318]};
+const ARESTAS=[['percepcao','contexto'],['contexto','hipoteses'],['hipoteses','planejamento'],['percepcao','planejamento','tr'],['planejamento','critica'],['planejamento','verificador','tr'],['critica','coordenacao'],['coordenacao','verificador'],['verificador','aprendizagem'],['aprendizagem','hipoteses','tr']];
+const ROT={ocioso:'ocioso',recebendo:'recebendo',processando:'processando',aguardando:'aguardando',concluido:'concluído',bloqueado:'bloqueado',erro:'erro'};
+const COR={ocioso:'#3d6170',recebendo:'var(--acc2)',processando:'var(--acc)',aguardando:'var(--warn)',concluido:'var(--ok)',bloqueado:'var(--blq)',erro:'var(--bad)'};
+$('leg').innerHTML=Object.keys(ROT).map(k=>`<span><i style="border-color:${COR[k]}"></i>${ROT[k]}</span>`).join('');
+(function montarMapa(){const s=$('mapa');let h='';
+  for(const [a,b,t] of ARESTAS){const [x1,y1]=POS[a],[x2,y2]=POS[b];let d;if(a==='aprendizagem'&&b==='hipoteses')d=`M${x1},${y1-32} C${x1+40},${y1-110} ${x2-60},${y2+90} ${x2-12},${y2+32}`;else if(a==='percepcao'&&b==='planejamento')d=`M${x1+20},${y1-26} C${x1+120},${y1-80} ${x2-120},${y2-80} ${x2-20},${y2-26}`;else if(a==='planejamento'&&b==='verificador')d=`M${x1-24},${y1+22} L${x2+24},${y2-22}`;else d=`M${x1},${y1} L${x2},${y2}`;
+    h+=`<path class="ar ${t||''}" id="ar-${a}-${b}" d="${d}"/>`}
+  for(const n of Object.keys(POS))if(n!=='monitor')h+=`<path class="ar mon" d="M${POS.monitor[0]},${POS.monitor[1]} L${POS[n][0]},${POS[n][1]}"/>`;
+  for(const [n,[x,y]] of Object.entries(POS))h+=`<g class="no" id="no-${n}" data-n="${n}" data-estado="ocioso"><title></title><circle class="anel" cx="${x}" cy="${y}" r="27"/><text x="${x}" y="${y}" class="num"></text><text class="nm" x="${x}" y="${y+39}">${n}</text><text class="st" x="${x}" y="${y+51}"></text><text class="wk" x="${x}" y="${y-36}"></text></g>`;
+  s.innerHTML=h})();
+function mapa(ns){for(const n of ns){const g=$('no-'+n.nome);if(!g)continue;g.dataset.estado=n.estado;g.querySelector('.num').textContent=n.numero;g.querySelector('.st').textContent=ROT[n.estado]||n.estado;
+  g.querySelector('.wk').textContent=(n.trabalhador||'?')+(n.pid?' · pid '+n.pid:'');
+  g.querySelector('title').textContent=`${n.numero}. ${n.nome} — ${n.papel}\nestado: ${ROT[n.estado]||n.estado}\ntrabalhador: ${n.trabalhador||'—'} (${n.tipo||'—'}${n.pid?', processo '+n.pid:''})\nmensagens: ${n.recebidas??'—'} recebidas, ${n.concluidas??'—'} ok, ${n.falhas??'—'} falhas, ${n.duplicadas??'—'} duplicadas\ntempo médio ${N(n.tempo_medio_ms)} ms · p95 ${N(n.tempo_p95_ms)} ms\nconfiança ${n.confianca==null?'—':N(n.confianca)}${n.critico?' · CRÍTICO':''}${n.ultimo_erro?'\núltimo erro: '+n.ultimo_erro:''}`}}
+// ---------- B: objetivo ----------
+function obj(d){if(!d){$('obj').innerHTML='<span class="vazio">Nenhum objetivo ainda. Escreva um acima e clique em Iniciar.</span>';$('bId').textContent='B';return}
+  const o=d.objetivo,u=d.uso,L=u.limites||{},p=d.plano;$('bId').textContent='B · '+o.id;
+  let h=`<div style="font-size:14px;margin-bottom:4px">${E(o.descricao)}</div><div class="linha"><span class="est e-${E(o.estado)}" id="bEstado" data-estado="${E(o.estado)}">${E(o.rotulo)}</span><span class="s">origem: ${E(o.origem.replace(/_/g,' '))} · prioridade ${E(o.prioridade)}${o.so_planejar?' · só planejar':''}</span></div>`;
+  h+=`<div class="fases">${d.fases.map(f=>`<span class="fase ${f.estado}">${E(f.fase)}</span>`).join('')}</div>`;
+  h+=`<dl class="kv"><dt>próxima etapa</dt><dd id="bProx">${E(o.proxima_etapa||'—')}</dd><dt>esperado</dt><dd>${E(o.resultado_esperado||'—')}</dd>`;
+  if(o.restricoes&&o.restricoes.length)h+=`<dt>restrições</dt><dd>${o.restricoes.map(E).join('; ')}</dd>`;
+  if(o.criterios_de_conclusao&&o.criterios_de_conclusao.length)h+=`<dt>concluir quando</dt><dd>${o.criterios_de_conclusao.map(E).join('; ')}</dd>`;
+  if(o.dependencias&&o.dependencias.length)h+=`<dt>depende de</dt><dd>${o.dependencias.map(E).join(', ')}</dd>`;
+  h+=`<dt>uso</dt><dd class="mono" style="font-size:11.5px">${u.mensagens} msgs · ${u.nos}/${L.max_nos_por_objetivo??'—'} etapas · ${u.replanos}/${L.max_replanos??'—'} replanos · ${u.revisoes_critica}/${L.max_revisoes_critica??'—'} devoluções da crítica · ${N(u.tempo_ativo_s,1)}/${L.max_tempo_objetivo_s??'—'} s</dd></dl>`;
+  if(o.bloqueio)h+=`<div class="aut" style="border-color:var(--blq)"><b>Bloqueio:</b> ${E(o.bloqueio.texto||o.bloqueio.tipo)}${o.bloqueio.recuperavel?' (recuperável)':''}</div>`;
+  if(o.degradado&&o.degradado.length)h+=`<div class="s alerta-a">modo degradado: ${o.degradado.map(x=>E(x.modulo+' — '+x.consequencia)).join('; ')}</div>`;
+  if(d.autorizacao){const a=d.autorizacao;h+=`<div class="aut" id="pedidoAut"><b>Preciso da sua autorização</b> para o plano v${a.plano_versao} (hash <span class="mono">${E(a.plano_hash.slice(0,12))}</span>).<ul>${(a.exigencias||[]).map(x=>`<li>${E(x.motivo||x)}</li>`).join('')}</ul><div class="s">Estratégia: ${E(a.resumo_do_plano.estrategia)} · ferramentas: ${E((a.resumo_do_plano.ferramentas||[]).join(', ')||'—')}. Vale só para este plano exato; o corretor ainda pode pedir a confirmação da ação.</div>
+    <button class="alerta" id="bAutorizar" onclick="controle('autorizar',{versao:${a.plano_versao},hash:'${E(a.plano_hash)}'})">Autorizar este plano</button><button class="ruim" id="bNegar" onclick="controle('negar')">Negar</button></div>`}
+  const b=[];if(o.estado==='aguardando_aceite')b.push(`<button onclick="controle('aceitar')">Aceitar objetivo sugerido</button>`);
+  if(o.estado==='plano_pronto'&&p&&p.executavel)b.push(`<button id="bExecutar" onclick="controle('executar')">Executar o plano pronto</button>`);
+  if(o.estado==='bloqueado'&&o.bloqueio&&(o.bloqueio.recuperavel||o.bloqueio.tipo==='autorizacao_negada'))b.push(`<button class="x" onclick="controle('retomar')">Retomar</button>`);
+  if(!['concluido','cancelado'].includes(o.estado))b.push(`<button class="ruim" id="bCancelar" onclick="controle('cancelar')">Cancelar este objetivo</button>`);
+  if(b.length)h+=`<div class="linha">${b.join('')}</div>`;
+  if(p){h+=`<h3 style="margin:12px 0 6px">Plano v${p.versao} <small class="mono">${E(p.estrategia||'—')} · ${E(p.hash.slice(0,8))}</small></h3><ul id="etapas">`;
+    for(const e of p.etapas)h+=`<li class="etapa"><span class="mono">${E(e.id)}</span><span>${E(e.descricao)}<br><span class="dep">${E(e.feito_por)}${e.depende_de.length?' · depende de '+e.depende_de.map(E).join(', '):' · sem dependência'} · espera: ${E(e.resultado_esperado)}</span></span><span class="est e-${E(e.estado)}">${E(e.estado)}</span></li>`;
+    h+='</ul>'}
+  if(o.resultado_final)h+=`<div class="s" style="margin-top:8px"><b>Resultado:</b> ${E(typeof o.resultado_final==='string'?o.resultado_final:(o.resultado_final.texto||JSON.stringify(o.resultado_final)))}</div>`;
+  if(o.historico_decisoes&&o.historico_decisoes.length)h+=`<details><summary><b>DECISÕES</b>${o.historico_decisoes.length} registradas</summary><ul>${o.historico_decisoes.slice().reverse().map(x=>`<li><span class="mono s">${E(x.quem)}</span> ${E(x.texto)} — <span class="s">${E(x.motivo)}</span></li>`).join('')}</ul></details>`;
+  $('obj').innerHTML=h}
+// ---------- D: hipóteses ----------
+function hip(d){if(!d||!d.hipoteses.length){$('hip').innerHTML='<span class="vazio">A fase de hipóteses ainda não rodou.</span>';return}
+  const esc=d.escolha||{};let h='';
+  for(const x of d.hipoteses.slice().sort((a,b)=>(a.posicao??99)-(b.posicao??99))){const c=x.confianca||{};
+    h+=`<div class="hip ${x.estrategia===esc.escolhida?'escolhida':''}" data-h="${E(x.estrategia)}"><h4><span>${E(x.id)} · ${E(x.estrategia)}</span><span class="est e-${x.status==='confirmada_nesta_tentativa'?'ok':x.status==='refutada_nesta_tentativa'?'falhou':'pendente'}">${E(x.status.replace(/_/g,' '))}</span></h4>
+    <div class="s">${E(x.texto)}</div><div class="mono s" style="margin-top:4px">confiança ${N(c.valor)} (n=${c.n}; ${c.calibrada?'calibrada':'não calibrada'}) · ${x.a_favor} a favor · ${x.contra} contra · ${x.viavel?'viável':'inviável'}${x.posicao?' · posição '+x.posicao:''}</div><div class="bar"><i class="${c.n?'':'q'}" style="width:${Math.round((c.valor||0)*100)}%"></i></div>
+    <details><summary><b>EVIDÊNCIAS</b>previsão e o que a revisaria</summary><ul>${x.evidencias_a_favor.map(e=>`<li><span class="tipo t-fato">a favor</span>${E(e.texto||e)}</li>`).join('')}${x.evidencias_contra.map(e=>`<li><span class="tipo t-hipotese">contra</span>${E(e.texto||e)}</li>`).join('')}
+    ${x.incertezas.map(i=>`<li><span class="tipo t-incerteza">incerteza</span>${E(i)}</li>`).join('')}<li><span class="tipo t-inferencia">previsão</span>${E(x.previsao.texto)}${x.previsao.onde_conferir?' — conferir em: '+E(x.previsao.onde_conferir):''}</li>${(x.condicoes_de_revisao||[]).map(i=>`<li><span class="tipo t-desconhecido">revisar se</span>${E(i)}</li>`).join('')}</ul></details></div>`}
+  if(esc.regra)h+=`<div class="s"><b>Regra de escolha:</b> ${E(esc.regra)}</div>`;
+  if(esc.excluidas&&esc.excluidas.length)h+=`<div class="s"><b>Fora da fila:</b> ${esc.excluidas.map(x=>E((x.id||x.estrategia||'')+' — '+(x.motivo||''))).join('; ')}</div>`;
+  $('hip').innerHTML=h}
+// ---------- E: planejamento ----------
+function plan(d){const p=d&&d.plano;if(!p){$('plan').innerHTML='<span class="vazio">Nenhum plano montado ainda.</span>';$('eV').textContent='E';return}
+  $('eV').textContent=`E · v${p.versao} · ${d.planos.length} plano(s)`;
+  let h=`<table id="versoes"><tr><th>versão</th><th>estratégia</th><th>crítica</th><th>resultado</th><th>aprendizado</th></tr>${d.planos.map(q=>`<tr><td>v${q.versao} <span class="s">${E(q.hash.slice(0,8))}</span></td><td>${E(q.estrategia||'—')}</td><td class="e-${E(q.critica||'pendente')}">${E(q.critica||'—')}</td><td class="e-${E(q.resultado||'pendente')}">${E(q.resultado||'—')}</td><td>${E(q.aprendizado||'—')}</td></tr>`).join('')}</table>`;
+  if(p.revisao)h+=`<div class="s" style="margin-top:6px"><b>O que mudou (v${p.revisao.de_versao}→v${p.revisao.para_versao}):</b> ${p.revisao.mudou.map(m=>E(`${m.campo}: ${m.de} → ${m.para} (${m.motivo})`)).join('; ')}</div>`;
+  h+=`<dl class="kv" style="margin-top:8px"><dt>previsão</dt><dd>${E(p.previsao.texto)}</dd><dt>estado inicial</dt><dd>${p.estado_inicial.fatos} fato(s), ${p.estado_inicial.desconhecidos} desconhecido(s)</dd></dl>`;
+  h+=`<details open><summary><b>SUCESSO</b>${p.criterios_de_sucesso.length} critério(s), verificados por fonte independente</summary><ul>${p.criterios_de_sucesso.map(c=>`<li><span class="mono">${E(c.id)}</span> ${E(c.descricao)}</li>`).join('')}${p.criterios_de_verificacao.map(v=>`<li><span class="tipo t-fato">como</span>${E(v.como)} — ${E(v.executor)}</li>`).join('')}</ul></details>`;
+  h+=`<details><summary><b>RISCOS</b>${p.riscos.length} risco(s) e incerteza(s)</summary><ul>${p.riscos.map(r=>`<li><span class="tipo t-${E(r.tipo)}">${E(r.tipo)}</span>${E(r.texto)}</li>`).join('')}</ul></details>`;
+  h+=`<details><summary><b>ALTERNATIVAS</b>${p.alternativas.length}</summary><ul>${p.alternativas.map(a=>`<li><b>${E(a.estrategia)}</b> — ${E(a.motivo)}</li>`).join('')}</ul></details>`;
+  h+=`<details><summary><b>INTERROMPER SE</b>${p.condicoes_para_interromper.length} condição(ões)</summary><ul>${p.condicoes_para_interromper.map(c=>`<li>${E(c)}</li>`).join('')}</ul></details>`;
+  if(p.critica)h+=`<details><summary><b>CRÍTICA</b><span class="e-${E(p.critica.veredito)}">${E(p.critica.veredito)}</span> — ${E(p.critica.resumo)}</summary><ul>${p.critica.regras.map(r=>`<li><span class="${r.ok?'e-ok':'e-falhou'}">${r.ok?'✓':'✗'}</span> <span class="mono">${E(r.regra)}</span> ${E(r.detalhe)}</li>`).join('')}</ul></details>`;
+  if(p.coerencia)h+=`<details><summary><b>COERÊNCIA</b><span class="${p.coerencia.coerente?'e-ok':'e-falhou'}">${p.coerencia.coerente?'coerente':'incoerente'}</span> (verificador, antes de executar)</summary><ul>${(p.coerencia.criterios||[]).map(c=>`<li><span class="${c.ok?'e-ok':'e-falhou'}">${c.ok?'✓':'✗'}</span> ${E(c.descricao)}: esperado ${E(JSON.stringify(c.esperado))}, observado ${E(JSON.stringify(c.observado))}</li>`).join('')}</ul></details>`;
+  if(p.execucao)h+=`<details><summary><b>EXECUÇÃO</b>tarefa ${E(p.execucao.tarefa)} — ${E(p.execucao.rotulo)} (o que o corretor disse, não prova do efeito)</summary><ul>${(p.execucao.passos||[]).map(s=>`<li><span class="mono">${E(s.id)}</span> ${E(s.ferramenta)} · ${E(s.estado)} · código ${E(s.codigo)}${s.verificacao?' · '+E(s.verificacao.veredito+' ('+s.verificacao.forca+')'):''}</li>`).join('')}</ul></details>`;
+  $('plan').innerHTML=h}
+// ---------- F: aprendizagem ----------
+function apr(d){if(!d||(!d.aprendizados.length&&!(d.plano&&d.plano.verificacao))){$('apr').innerHTML='<span class="vazio">Nada aprendido ainda: a aprendizagem só roda depois da verificação independente.</span>';return}
+  let h='';const v=d.plano&&d.plano.verificacao;
+  if(v)h+=`<div><b>Verificação independente:</b> <span class="est e-${E(v.veredito)}" id="fVeredito">${E(v.veredito)}</span> <span class="s">fonte: ${E(v.fonte)}</span><div class="s">${E(v.observado_resumo)}</div>
+    <table style="margin-top:4px"><tr><th>critério</th><th>esperado</th><th>observado</th><th></th></tr>${(v.criterios||[]).map(c=>`<tr><td>${E(c.descricao)}</td><td>${E(typeof c.esperado==='object'?JSON.stringify(c.esperado):c.esperado)}</td><td>${E(typeof c.observado==='object'?JSON.stringify(c.observado):c.observado)}</td><td class="${c.ok?'e-ok':'e-falhou'}">${c.ok?'✓':'✗'}</td></tr>`).join('')}</table>${v.discordancia_com_a_execucao?`<div class="alerta-a s">discordância com o que a execução relatou: ${E(JSON.stringify(v.discordancia_com_a_execucao))}</div>`:''}</div>`;
+  h+=`<ul id="aprendizados" style="margin-top:8px">${d.aprendizados.slice().reverse().map(a=>`<li><b class="mono">${E(a.id)}</b> plano v${a.plano_versao} · <span class="e-${E(a.resultado)}">${E(a.resultado)}</span><div>${E(a.efeito)}</div>${(a.licoes||[]).map(l=>`<div class="s">• ${E(l)}</div>`).join('')}${(a.investigar||[]).map(l=>`<div class="s">? ${E(l)}</div>`).join('')}</li>`).join('')}</ul>`;
+  const ap=d.plano&&d.plano.aprendizagem;
+  if(ap){h+=`<details><summary><b>LIÇÕES</b>tipadas (${(ap.licoes||[]).length}) e fatores (${(ap.fatores||[]).length})</summary><ul>${(ap.licoes||[]).map(l=>`<li><span class="tipo t-${E(l.tipo)}">${E(l.tipo)}</span>${E(l.texto)} <span class="s">(confiança ${N(l.confianca)}, n=${l.n})</span>${l.revisavel_se?'<div class="s">revisar se: '+E(l.revisavel_se)+'</div>':''}</li>`).join('')}${(ap.fatores||[]).map(l=>`<li><span class="tipo t-${E(l.tipo)}">${E(l.tipo)}</span>${E(l.texto)}</li>`).join('')}</ul></details>`;
+    if(ap.efeito_na_selecao)h+=`<div class="s"><b>Efeito na escolha:</b> ${E(typeof ap.efeito_na_selecao==='string'?ap.efeito_na_selecao:(ap.efeito_na_selecao.texto||JSON.stringify(ap.efeito_na_selecao)))}</div>`;
+    if(ap.propostas_de_teste&&ap.propostas_de_teste.length)h+=`<details><summary><b>EXPLORAR</b>${ap.propostas_de_teste.length} proposta(s) de teste (nenhuma executada sozinha)</summary><ul>${ap.propostas_de_teste.map(t=>`<li>${E(t.texto||t.descricao||JSON.stringify(t))}</li>`).join('')}</ul></details>`}
+  h+='<div class="s" style="margin-top:6px">Correlação não é causa e uma experiência não vira regra: as lições ficam revisáveis e podem ser revogadas.</div>';
+  $('apr').innerHTML=h}
+// ---------- 12 perguntas ----------
+function perg(d){if(!d){$('perg').innerHTML='<span class="vazio">—</span>';return}
+  $('perg').innerHTML=d.perguntas.map(q=>`<details data-q="${q.n}" ${ABERTAS.has(q.n)?'open':''}><summary><b>${q.n}</b>${E(q.pergunta)} <span class="s">${E(q.resposta)}</span></summary><ul>${q.itens.map(i=>`<li><span class="tipo t-${E(i.tipo)}">${E(i.tipo)}</span>${E(i.texto)} <span class="fonte">${E(i.fonte)}</span></li>`).join('')||'<li class="vazio">sem itens</li>'}</ul></details>`).join('');
+  $('perg').querySelectorAll('details').forEach(x=>x.addEventListener('toggle',()=>{const n=+x.dataset.q;x.open?ABERTAS.add(n):ABERTAS.delete(n)}))}
+// ---------- G: operacional ----------
+function oper(e){const o=e.operacional;$('gModo').innerHTML=`G · modo <b class="${o.modo_de_operacao==='normal'?'e-ok':o.modo_de_operacao==='bloqueado'?'e-bloqueado':'e-aguardando'}" id="modoOp">${E(o.modo_de_operacao)}</b>`;
+  let h=`<table id="trabalhadores"><tr><th>trabalhador</th><th>estado</th><th>processo</th><th>resposta</th></tr>${Object.entries(o.trabalhadores||{}).map(([w,s])=>`<tr data-w="${E(w)}"><td>${E(w)} <span class="s">${E(s.tipo||'')}</span></td><td class="${s.disponivel?'e-ok':'e-erro'}">${s.disponivel?'no ar':'fora do ar'}</td><td>${s.pid?E(s.pid):'—'}</td><td>${s.disponivel?N(s.resposta_ms)+' ms':E((s.erro||'').slice(0,60))}</td></tr>`).join('')}</table>`;
+  h+=`<table style="margin-top:8px"><tr><th>módulo</th><th>estado</th><th>confiança</th><th>p95</th><th>falhas</th></tr>${Object.entries(o.modulos||{}).map(([n,m])=>`<tr title="${E(m.explicacao||'')}"><td>${E(n)}${m.critico?' <span class="s">crítico</span>':''}</td><td class="e-${m.estado==='ok'?'ok':m.estado==='indisponivel'?'erro':'aguardando'}">${E(m.estado)}</td><td>${N(m.confianca)}</td><td>${m.tempo_p95_ms==null?'—':N(m.tempo_p95_ms,1)+' ms'}</td><td>${m.taxa_de_falha==null?'—':Math.round(m.taxa_de_falha*100)+'%'}</td></tr>`).join('')}</table>`;
+  h+=`<div class="s" style="margin-top:6px">pendentes: <b id="gPend">${o.pendentes}</b> · por estado: ${Object.entries(o.por_estado||{}).map(([k,v])=>E(k)+' '+v).join(', ')||'—'} · saúde lida ${o.saude_em?N(Math.max(0,e.agora-o.saude_em),1)+' s atrás':'—'}</div>`;
+  if((o.alertas||[]).length)h+=`<ul style="margin-top:6px">${o.alertas.map(a=>`<li class="${a.nivel==='grave'?'alerta-g':'alerta-a'}">${E(a.texto)}</li>`).join('')}</ul>`;
+  if((o.erros_recentes||[]).length)h+=`<details><summary><b>ERROS</b>${o.erros_recentes.length} recente(s)</summary><ul>${o.erros_recentes.slice().reverse().map(x=>`<li><span class="mono s">#${x.seq} ${E(x.objetivo)}</span> ${E(x.tipo)} — ${E(x.texto||'')}</li>`).join('')}</ul></details>`;
+  if(o.armazem&&o.armazem.erros)h+=`<div class="alerta-g s">erros de gravação: ${o.armazem.erros} (${E(o.armazem.ultimo_erro)})</div>`;
+  if((e.avisos||[]).length)h+=`<ul style="margin-top:6px">${e.avisos.map(a=>`<li class="alerta-a">${E(a)}</li>`).join('')}</ul>`;
+  h+=`<div class="s" style="margin-top:6px">A confiança-base de cada módulo é uma suposição de projeto declarada no código, não uma medida.</div>`;
+  $('oper').innerHTML=h}
+function tags(e){$('tags').innerHTML=[['modo',e.modo],['backend',e.backend],['contrato',e.contrato],['estado',e.persistente?'gravado em disco':'só na memória']].map(([k,v])=>`<span class="tag">${k} <b id="tag-${k}">${E(v)}</b></span>`).join('')}
+function lista(e){$('objs').innerHTML=e.objetivos.map(o=>`<li class="obj ${o.id===SEL?'sel':''}" data-id="${E(o.id)}"><b class="mono">${E(o.id)}</b> <span class="est e-${E(o.estado)}">${E(o.rotulo)}</span> ${E(o.descricao)} <span class="s">${o.plano?'· plano v'+o.plano.versao+' '+E(o.plano.estrategia||''):''}</span></li>`).join('')||'<li class="vazio">nenhum</li>';
+  $('objs').querySelectorAll('.obj').forEach(li=>li.onclick=()=>{SEL=li.dataset.id;$('fluxo').innerHTML='';EVENTOS=[];SEQ=0;estado()})}
+// ---------- C: fluxo ----------
+const CLASSE=t=>/^mensagem_/.test(t)?'msg':/falh|indispon|barrad|limite|laco|erro|rejeit|negad|cancel/.test(t)?'ruim':/concluido|sucesso|verificacao$|aprendizagem/.test(t)?'bom':/autorizacao_pedida|aguard/.test(t)?'dono':'';
+function fluxo(){const so=$('soSel').checked,vis=EVENTOS.filter(e=>!so||!SEL||e.objetivo===SEL).slice(-250).reverse();
+  $('fluxo').innerHTML=vis.map(e=>`<li class="${CLASSE(e.tipo)}" data-tipo="${E(e.tipo)}"><span class="sq">#${e.seq}</span><span class="tp">${E(e.tipo.replace(/_/g,' '))}</span><span>${E(e.objetivo)} · ${E(e.fase||'')} · ${E(e.texto||'')}</span></li>`).join('')||'<li class="vazio">sem eventos</li>';
+  const m=EVENTOS.filter(e=>e.tipo==='mensagem_recebida').slice(-1)[0];$('ultmsg').textContent=m?`última mensagem: ${m.texto}`:''}
+$('soSel').onchange=fluxo;
+async function eventos(){try{const j=await api('/precortex/eventos?desde='+SEQ);if(j.ok){for(const e of j.eventos){EVENTOS.push(e);SEQ=Math.max(SEQ,e.seq)}if(EVENTOS.length>1500)EVENTOS=EVENTOS.slice(-1000);if(j.eventos.length)fluxo();C3.eventos(j.eventos)}}catch(_){}}
+
+// ---------- A3: cérebro em 3D (canvas 2D com perspectiva; sem bibliotecas, sem eval) ----------
+const C3=(function(){
+  const cv=$('c3'),cx=cv.getContext('2d'),REDUZ=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const P={planejamento:[.28,.32,.92,'pré-frontal'],hipoteses:[-.28,.32,.92,'pré-frontal'],critica:[0,.5,.5,'cingulado'],coordenacao:[0,.02,.12,'núcleos da base'],
+    percepcao:[0,.18,-1.02,'occipital'],verificador:[.56,.46,-.38,'parietal'],contexto:[-.7,-.18,.12,'temporal'],aprendizagem:[.36,-.24,-.12,'hipocampo'],monitor:[0,-.56,-.48,'tálamo/tronco']};
+  const COR={ocioso:[61,97,112],recebendo:[168,236,255],processando:[79,209,255],aguardando:[245,165,36],concluido:[62,207,142],bloqueado:[197,140,255],erro:[255,84,104]};
+  // casca: dois hemisférios (pontos fixos, semente fixa) + cerebelo
+  let a=7;const r=()=>{a=(a*16807)%2147483647;return a/2147483647};const casca=[];
+  for(let i=0;i<1500;i++){const u=r()*2-1,t=r()*Math.PI*2,q=Math.sqrt(1-u*u);let x=q*Math.cos(t),y=u,z=q*Math.sin(t);
+    if(y<-.55)continue;const h=x<0?-1:1;casca.push([h*.08+x*.82,y*.72+.08,z*1.12*(1-.08*y)]);}
+  for(let i=0;i<220;i++){const u=r()*2-1,t=r()*Math.PI*2,q=Math.sqrt(1-u*u);casca.push([q*Math.cos(t)*.5,-.5+u*.22,-.78+q*Math.sin(t)*.3]);}
+  let rotY=.6,rotX=-.25,arr=null,W=0,H=0,DPR=1;const est={},pulsos=[];let ultimo=-1,fila=[],t0=performance.now(),info='';
+  function tam(){DPR=Math.min(2,devicePixelRatio||1);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0)}
+  addEventListener('resize',tam);tam();
+  cv.addEventListener('pointerdown',e=>{arr=[e.clientX,e.clientY,rotY,rotX];cv.setPointerCapture(e.pointerId)});
+  cv.addEventListener('pointermove',e=>{if(!arr)return;rotY=arr[2]+(e.clientX-arr[0])*.01;rotX=Math.max(-1.2,Math.min(1.2,arr[3]+(e.clientY-arr[1])*.01))});
+  cv.addEventListener('pointerup',()=>arr=null);
+  function proj(p){const cy=Math.cos(rotY),sy=Math.sin(rotY),cxr=Math.cos(rotX),sx=Math.sin(rotX);
+    let x=p[0]*cy+p[2]*sy,z=-p[0]*sy+p[2]*cy,y=p[1];const y2=y*cxr-z*sx,z2=y*sx+z*cxr;const f=2.9/(3.4-z2),k=Math.min(W,H*1.35)*.5;
+    return [W/2+x*f*k,H/2-y2*f*k,z2,f]}
+  function estados(ns){for(const n of ns)est[n.nome]=n}
+  function eventos(evs){
+    if(ultimo<0){ultimo=evs.length?evs[evs.length-1].seq:0;return}           // na abertura não repete o histórico: só o que acontecer daqui para frente
+    const novos=evs.filter(e=>e.seq>ultimo);if(!novos.length)return;ultimo=novos[novos.length-1].seq;
+    const agora=performance.now(),passo=Math.min(140,560/novos.length);let i=0;
+    for(const e of novos){let de=null,para=null,ok=true;
+      if(e.tipo==='mensagem_enviada'){de='coordenacao';para=e.para}else if(e.tipo==='mensagem_recebida'){de=e.de;para='coordenacao';ok=e.ok!==false}
+      else if(e.tipo==='tentativa_falhou'||e.tipo==='modulo_indisponivel'){de='coordenacao';para=e.para||e.modulo;ok=false}
+      if(de&&para&&P[de]&&P[para]&&de!==para){fila.push({de,para,ok,ini:agora+i*passo,dur:REDUZ?1:650,txt:e.texto||''});i++}
+      info=`#${e.seq} ${e.objetivo} · ${(e.texto||e.tipo).slice(0,110)}`}
+    if(fila.length>400)fila=fila.slice(-400)}
+  function quadro(ts){
+    cx.clearRect(0,0,W,H);if(!arr&&!REDUZ)rotY+=.0022;const pulso=.5+.5*Math.sin(ts/220);
+    const pts=casca.map(proj);for(const q of pts){const al=.07+.33*(q[2]+1.2)/2.4;cx.fillStyle=`rgba(79,209,255,${al.toFixed(3)})`;cx.fillRect(q[0],q[1],1.8*q[3],1.8*q[3])}
+    const pp={};for(const n in P)pp[n]=proj(P[n]);
+    cx.lineWidth=1;for(const n in P){if(n==='coordenacao')continue;const a1=pp.coordenacao,b=pp[n];cx.strokeStyle='rgba(79,209,255,.12)';cx.beginPath();cx.moveTo(a1[0],a1[1]);cx.lineTo(b[0],b[1]);cx.stroke()}
+    const vivos=[];for(const f of fila){const t=(ts-f.ini)/f.dur;if(t<0){vivos.push(f);continue}if(t>1)continue;vivos.push(f);
+      const a1=pp[f.de],b=pp[f.para],x=a1[0]+(b[0]-a1[0])*t,y=a1[1]+(b[1]-a1[1])*t,c=f.ok?[168,236,255]:[255,84,104];
+      const g=cx.createRadialGradient(x,y,0,x,y,9);g.addColorStop(0,`rgba(${c},1)`);g.addColorStop(1,`rgba(${c},0)`);cx.fillStyle=g;cx.beginPath();cx.arc(x,y,9,0,7);cx.fill();
+      cx.strokeStyle=`rgba(${c},.55)`;cx.lineWidth=2;cx.beginPath();cx.moveTo(a1[0],a1[1]);cx.lineTo(x,y);cx.stroke()}
+    fila=vivos;
+    const ordem=Object.keys(P).sort((u,v)=>pp[u][2]-pp[v][2]);
+    for(const n of ordem){const q=pp[n],e=est[n]||{estado:'ocioso'},c=COR[e.estado]||COR.ocioso;let rr=(e.estado==='ocioso'?9:13)*q[3];
+      if(e.estado==='processando'||e.estado==='recebendo')rr*=1+.35*pulso;
+      const g=cx.createRadialGradient(q[0],q[1],0,q[0],q[1],rr*2.6);g.addColorStop(0,`rgba(${c},.95)`);g.addColorStop(.35,`rgba(${c},.45)`);g.addColorStop(1,`rgba(${c},0)`);
+      cx.fillStyle=g;cx.beginPath();cx.arc(q[0],q[1],rr*2.6,0,7);cx.fill();cx.fillStyle=`rgb(${c})`;cx.beginPath();cx.arc(q[0],q[1],rr*.45,0,7);cx.fill();
+      cx.font='600 11px ui-monospace,monospace';cx.textAlign='center';cx.fillStyle='#d6ecf5';cx.fillText(`${e.numero||''} ${n}`,q[0],q[1]-rr-6);
+      cx.font='10px ui-monospace,monospace';cx.fillStyle=`rgb(${c})`;cx.fillText(ROT[e.estado]||e.estado,q[0],q[1]+rr+13)}
+    $('c3info').textContent=info||'aguardando mensagens…';
+    requestAnimationFrame(quadro)}
+  requestAnimationFrame(quadro);
+  return {estados,eventos}})();
+// ---------- laço ----------
+async function estado(){try{const e=await api('/precortex/estado'+(SEL?'?id='+encodeURIComponent(SEL):''));if(!e.ok)throw new Error('estado');
+    FALHAS=0;ULT=Date.now();conexao(e.operacional.modo_de_operacao==='normal'?'ok':e.operacional.modo_de_operacao==='bloqueado'?'bad':'warn','ao vivo · evento #'+e.seq);
+    if(!SEL&&e.atual)SEL=e.atual;tags(e);mapa(e.neuronios);C3.estados(e.neuronios);obj(e.detalhe);hip(e.detalhe);plan(e.detalhe);apr(e.detalhe);perg(e.detalhe);oper(e);lista(e);for(const i of ['obj','hip','plan','apr','perg','oper'])$(i).classList.remove('vazio');document.body.dataset.seq=e.seq;
+  }catch(err){FALHAS++;if(FALHAS>1)conexao('bad','sem resposta do servidor — os dados abaixo podem estar velhos')}}
+function msg(t){$('msg').textContent=t}
+async function iniciar(){const t=$('txt').value.trim();if(!t){msg('Escreva o objetivo.');return}$('bIniciar').disabled=true;
+  try{const r=await api('/precortex/objetivo',{texto:t,so_planejar:$('soPlan').checked});if(r.ok){SEL=r.id;EVENTOS=[];SEQ=0;$('fluxo').innerHTML='';msg('Objetivo '+r.id+' registrado.')}else msg('Não registrei: '+(r.erro||r.msg||'erro'))}catch(_){msg('Sem conexão.')}
+  $('bIniciar').disabled=false;estado()}
+async function controle(acao,extra){if(!SEL)return;try{const r=await api('/precortex/controle',Object.assign({acao,id:SEL},extra||{}));msg(r.ok?`${acao}: ok`+(r.nota?' — '+r.nota:''):`${acao}: ${r.erro||r.msg||'recusado'}`)}catch(_){msg('Sem conexão.')}estado()}
+async function interromper(){const e=await api('/precortex/estado');let n=0;for(const o of e.objetivos||[])if(!['concluido','cancelado'].includes(o.estado)){await api('/precortex/controle',{acao:'cancelar',id:o.id});n++}msg(n?`Pedi o cancelamento de ${n} objetivo(s). A FRIDAY e os trabalhadores continuam no ar.`:'Nada em andamento para interromper.');estado()}
+async function limpar(){const r=await api('/precortex/controle',{acao:'limpar'});if(r.ok){SEL=null;EVENTOS=[];SEQ=0;$('fluxo').innerHTML='';msg('Estado temporário arquivado'+(r.arquivado_em?' em '+r.arquivado_em:'')+'. Experiências e memórias permanentes não foram tocadas.')}else msg('Não limpei: '+(r.erro||r.msg||''));estado()}
+if(T){estado();eventos();setInterval(estado,1000);setInterval(eventos,600)}
+</script>
+</body></html>

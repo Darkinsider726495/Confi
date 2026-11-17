@@ -1,0 +1,49 @@
+# segredos e estado local — nunca vão para o git
+.env
+.env.local
+.env.bak
+*.key
+*.pem
+auditoria.jsonl
+*.db
+*.db-journal
+diagnostico.txt
+protocolos.json
+token.txt
+.friday-token
+# a memória pessoal fica no cofre do Obsidian (ou em cofre/ ao lado do projeto)
+cofre/
+# ambientes e lixo de build
+.venv/
+__pycache__/
+*.pyc
+voz/
+!servidor/voz/
+modelos/
+*.onnx
+node_modules/
+# configuração pessoal do Claude Code (a compartilhada é .claude/settings.json)
+.claude/settings.local.json
+.supervisor.pid
+friday/.heartbeat
+
+# Estado local da fila, diário de evolução e backups (não versionar)
+.evolucao/
+
+# Token local e arquivos privados
+friday/.token
+friday/friday.db
+friday/friday.db-*
+*.sqlite
+*.sqlite3
+# Segredos e lixo do Windows
+.env
+cofre/
+*Zone.Identifier
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.jsonl
+memoria_coletiva.json
+*.log

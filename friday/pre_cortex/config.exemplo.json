@@ -1,0 +1,20 @@
+{
+  "_leia": "Exemplo SEM segredos. Copie para outro lugar, ajuste e aponte PRECORTEX_CONFIG para ele. A chave de sessão entre processos NUNCA fica aqui: só em PRECORTEX_TOKEN (ambiente). Chaves que começam com _ são ignoradas.",
+  "modo": "distribuido",
+  "backend": "deterministico",
+  "timeout_msg_s": 15.0,
+  "tentativas_msg": 3,
+  "espera_entre_tentativas_s": 0.2,
+  "max_replanos": 3,
+  "max_revisoes_critica": 3,
+  "max_tempo_objetivo_s": 120.0,
+  "max_nos_por_objetivo": 80,
+  "max_paralelo": 4,
+  "timeout_execucao_s": 30.0,
+  "ritmo_demo_s": 0.0,
+  "saude_intervalo_s": 2.0,
+  "workers": {
+    "cognicao": {"url": "http://127.0.0.1:9101", "neuronios": ["percepcao", "hipoteses", "planejamento"]},
+    "revisao": {"url": "http://127.0.0.1:9102", "neuronios": ["critica", "verificador"]}
+  }
+}

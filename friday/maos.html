@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>FRIDAY · Mãos</title>
+<style>
+  :root { --ciano: #00f0ff; --alerta: #ff3333; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', monospace; color: var(--ciano); }
+  #video { position: absolute; inset: 0; width: 100vw; height: 100vh; object-fit: cover; transform: scaleX(-1); z-index: 1; }
+  #tres { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
+  #bio { position: absolute; inset: 0; width: 100vw; height: 100vh; z-index: 10; transform: scaleX(-1); pointer-events: none; }
+  #ui { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; z-index: 100; font-weight: bold; font-size: 14px;
+        text-shadow: 0 0 10px var(--ciano); border-left: 3px solid var(--ciano); padding: 12px 14px; background: rgba(0,0,0,.6); max-width: calc(100vw - 40px); }
+  #ui b { color: #fff; }
+  #ajuda { font-size: 10px; margin-top: 6px; color: #8fdcff; font-weight: normal; line-height: 1.5; }
+  #camaviso { display: none; margin-top: 8px; color: var(--alerta); font-size: 12px; }
+  #barra { position: absolute; left: 0; right: 0; bottom: 0; z-index: 100; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+           padding: 10px 12px max(10px, env(safe-area-inset-bottom)); background: rgba(0,0,0,.6); }
+  #barra input, #barra select, #barra button, #barra a { font: inherit; font-size: 13px; color: var(--ciano); background: rgba(0,20,30,.85);
+           border: 1px solid var(--ciano); padding: 8px 10px; text-decoration: none; min-height: 40px; box-sizing: border-box; }
+  #barra button { cursor: pointer; }
+  #barra input { flex: 1 1 9em; min-width: 9em; max-width: 16em; }
+  #aviso { font-size: 12px; color: #fff; flex: 1 1 14em; }
+  #privacidade { font-size: 10px; color: #8fdcff; font-weight: normal; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div>FRIDAY · MÃOS</div>
+  <div>ESTADO: <b id="modo">iniciando</b></div>
+  <div>BLOCOS: <b id="blocos">0</b></div>
+  <div id="ajuda">
+    DIREITA: pinça = construir · indicador (com a esquerda em pinça) = apagar · palma aberta = fixar<br>
+    ESQUERDA: punho = agarrar o mundo<br>
+    DUAS PALMAS = girar · DOIS PUNHOS (segurando) = reiniciar a cena (eu guardo um rascunho antes)
+  </div>
+  <div id="privacidade">A câmera é só deste navegador: nenhuma imagem sai daqui. Para a FRIDAY vai apenas o nome do gesto (como «construir») e os modelos que você salvar.</div>
+  <div id="camaviso" role="alert"></div>
+</div>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="tres"></canvas>
+<canvas id="bio"></canvas>
+<div id="barra">
+  <a href="/">← FRIDAY</a>
+  <input id="nome" maxlength="60" aria-label="nome do modelo" autocomplete="off">
+  <button id="salvar" type="button">Salvar modelo</button>
+  <select id="lista" aria-label="modelos guardados"><option value="">modelos guardados…</option></select>
+  <span id="aviso"></span>
+</div>
+<script src="/static/maos/three.min.js"></script>
+<script src="/static/maos/hands.js"></script>
+<script src="/static/maos/maos_gestos.js"></script>
+<script src="/static/maos/maos.js"></script>
+</body>
+</html>

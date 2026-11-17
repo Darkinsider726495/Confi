@@ -1,0 +1,5 @@
+Arquivos de terceiros nesta pasta (copiados sem alteração do npm, para a FRIDAY funcionar sem internet; os hashes estão em SHA256SUMS):
+  three.min.js (three@0.128.0)                         licença MIT (LICENSE-three.txt)
+  hands*.js/.wasm/.data/.binarypb/.tflite (@mediapipe/hands@0.4.1675469240)   licença Apache-2.0, Google
+O código das mãos (maos.js, maos_gestos.js) é adaptado do Voxel Architect v4.1, github.com/DEVNEPTUNE/potential-palm-tree
+(o repositório não traz arquivo de licença: confira com quem o escreveu antes de redistribuir).

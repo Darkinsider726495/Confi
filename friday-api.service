@@ -1,0 +1,20 @@
+# API local de evolução da FRIDAY (fila). Sobe junto com a FRIDAY no boot.
+# Só 127.0.0.1 + token (do .env). Modo queue-only: recebe candidatos, NÃO promove.
+# A promoção continua manual (scripts/evoluir.py). O install.sh --servico preenche usuário e pasta.
+[Unit]
+Description=FRIDAY Evolution API (fila local)
+After=network-online.target
+Wants=network-online.target
+[Service]
+User=__USUARIO__
+WorkingDirectory=__DIR__
+EnvironmentFile=__DIR__/.env
+Environment=PATH=__DIR__/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=__DIR__/.venv/bin/python -m friday.api_evolutiva
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+# Inicia a FRIDAY junto com o aparelho. O install.sh --servico preenche usuário e pasta sozinho.
+[Unit]
+Description=FRIDAY
+After=network-online.target sound.target
+Wants=network-online.target
+[Service]
+User=__USUARIO__
+WorkingDirectory=__DIR__
+EnvironmentFile=__DIR__/.env
+Environment=PATH=__DIR__/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=__DIR__/.venv/bin/python friday/main.py
+Restart=always
+RestartSec=5
+# endurecimento
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

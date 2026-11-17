@@ -1,0 +1,51 @@
+FRIDAY — já vem configurada
+  porta 8081 · modo local (Ollama) · API de evolução integrada (fila, 127.0.0.1 + token) · auto-promote DESLIGADO
+
+A FRIDAY e a API sobem JUNTAS no boot, como dois serviços do sistema.
+A busca semântica da memória (RAG) já vem ativa: a FRIDAY indexa o cérebro de madrugada
+e passa a lembrar também por significado. Precisa do passo 1 (instala o lightrag) e do bge-m3 (passo 2).
+
+No Kali, dentro desta pasta, rode na ordem:
+
+1) INSTALAÇÃO (cria o ambiente, baixa dependências e voz, e registra os DOIS serviços pra subir no boot):
+   Primeiro entre na pasta "cd friday-pi" 
+   bash install.sh --servico
+
+2) INSTALAR O OLLAMA (IA local; o texto não sai da sua máquina):
+   curl -fsSL https://ollama.com/install.sh | sh -o /tmp/install-ollama.sh
+   less /tmp/install-ollama.sh
+   bash /tmp/install-ollama.sh
+   sudo systemctl enable --now ollama
+   ollama pull llama3.2:3b
+   ollama pull bge-m3            # embedding da busca semântica da memória (RAG)
+
+3) LIGAR (sobe a FRIDAY e a API juntas):
+   sudo systemctl start friday friday-api
+   # logs dos dois:  journalctl -u friday -u friday-api -f
+   # painel:         http://127.0.0.1:8081
+   # API (fila):     http://127.0.0.1:8765  (exige token; só 127.0.0.1)
+
+A partir daqui, sempre que o Kali ligar, as duas sobem sozinhas.
+
+PARAR (só você):  sudo systemctl stop friday friday-api
+NÃO SUBIR NO BOOT: sudo systemctl disable friday friday-api
+
+--- Importante ---
+A API é "queue-only": recebe candidatos de evolução e os GUARDA na fila.
+Ela NÃO aplica nada. Pra aplicar um candidato (ver o diff, rodar os testes e decidir):
+   python3 scripts/evoluir.py
+FRIDAY_AUTO_PROMOTE está 'no' de propósito. Ligar isso faz a FRIDAY reescrever o
+próprio código sem a sua revisão — não recomendado.
+
+Trocar o token da API por um seu:
+   sed -i "s|^FRIDAY_API_TOKEN=.*|FRIDAY_API_TOKEN=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')|" .env
+   sudo systemctl restart friday-api
+
+--- Atualização de arquitetura — fase 3 ---
+
+Esta versão inclui memória coletiva descritiva, grafo de conexões observadas e replay
+de contexto para workers após reinício. Ao atualizar uma instalação existente, preserve
+o seu arquivo `.env` (ele não é incluído neste ZIP) e mantenha `PRECORTEX_MODO=distribuido`
+e `PRECORTEX_WORKERS` conforme a configuração atual. Não copie `.env.example` por cima
+do `.env` existente. A memória coletiva é gravada em `memoria_coletiva.json`.
+Consulte `RELATORIO_TECNICO_FRIDAY_FASE3.md`.

@@ -1,0 +1,23 @@
+# N&R Continuum 0.1.0 — configuração local (modo simulação)
+
+mode = "sim"
+vm = "sessao-viva"
+painel_host = "127.0.0.1"   # só este computador acessa o painel
+painel_port = 8081          # a 8080 já está ocupada
+sim_speed = 1.0
+
+[audit]
+# Relativo à pasta deste arquivo: grava em ./dados/
+path = "dados/historico.jsonl"
+key = "dados/chave_ed25519.pem"
+pq = true
+ots = false
+
+[controller]
+kind = "sim"
+
+[cores.A]
+label = "CORE A"
+
+[cores.B]
+label = "CORE B"

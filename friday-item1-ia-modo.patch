@@ -1,0 +1,73 @@
+--- a/friday/ponte_ia.py
++++ b/friday/ponte_ia.py
+@@ -76,12 +76,23 @@
+         raise ValueError(f"system deve ter no máximo {MAX_SYSTEM_CHARS} caracteres.")
+     system_text = (system or SYSTEM_DEFAULT).strip() or SYSTEM_DEFAULT
+     errors = []
+-    local_first = (os.getenv("FRIDAY_HYBRID_ORDER", "local_first").strip().lower() != "cloud_first")
+-    cloud_enabled = _truthy("FRIDAY_HYBRID_CLOUD_FALLBACK", "yes")
+-    providers = ["local", "cloud"] if local_first else ["cloud", "local"]
++    # IA_MODO é a política global de privacidade/provedor da FRIDAY:
++    # - local: nunca envia conteúdo à nuvem;
++    # - nuvem: nunca consulta o Ollama;
++    # - auto: respeita a ordem e o fallback configurados para esta ponte.
++    mode = (os.getenv("IA_MODO") or "auto").strip().lower()
++    if mode not in {"auto", "local", "nuvem"}:
++        mode = "auto"
++
++    if mode == "local":
++        providers = ["local"]
++    elif mode == "nuvem":
++        providers = ["cloud"]
++    else:
++        local_first = (os.getenv("FRIDAY_HYBRID_ORDER", "local_first").strip().lower() != "cloud_first")
++        cloud_fallback = _truthy("FRIDAY_HYBRID_CLOUD_FALLBACK", "yes")
++        providers = (["local", "cloud"] if cloud_fallback else ["local"]) if local_first else ["cloud", "local"]
+     for provider in providers:
+-        if provider == "cloud" and not cloud_enabled:
+-            continue
+         if provider == "local":
+             try:
+                 return {"text": _ollama(prompt, system_text, session=session), "provider": "ollama"}
+--- a/tests/test_ponte_ia.py
++++ b/tests/test_ponte_ia.py
+@@ -67,3 +67,39 @@
+     finally:
+         server.shutdown()
+         server.server_close()
++
++
++def test_modo_local_bloqueia_groq_mesmo_com_fallback_habilitado(monkeypatch):
++    monkeypatch.setenv("IA_MODO", "local")
++    monkeypatch.setenv("FRIDAY_HYBRID_ORDER", "cloud_first")
++    monkeypatch.setenv("FRIDAY_HYBRID_CLOUD_FALLBACK", "yes")
++    monkeypatch.setenv("GROQ_API_KEY", "test-key")
++    session = Mock()
++    session.post.side_effect = OSError("offline")
++    with patch.object(ponte_ia, "_groq") as groq:
++        with pytest.raises(ponte_ia.PonteIAError):
++            ponte_ia.responder("conteúdo privado", session=session)
++    groq.assert_not_called()
++
++
++def test_modo_nuvem_nao_consulta_ollama(monkeypatch):
++    monkeypatch.setenv("IA_MODO", "nuvem")
++    monkeypatch.setenv("GROQ_API_KEY", "test-key")
++    session = Mock()
++    with patch.object(ponte_ia, "_ollama") as ollama, patch.object(ponte_ia, "_groq", return_value="resposta remota"):
++        result = ponte_ia.responder("oi", session=session)
++    assert result == {"text": "resposta remota", "provider": "groq"}
++    ollama.assert_not_called()
++
++
++def test_modo_auto_preserva_fallback_configurado(monkeypatch):
++    monkeypatch.setenv("IA_MODO", "auto")
++    monkeypatch.setenv("FRIDAY_HYBRID_ORDER", "local_first")
++    monkeypatch.setenv("FRIDAY_HYBRID_CLOUD_FALLBACK", "no")
++    monkeypatch.setenv("GROQ_API_KEY", "test-key")
++    session = Mock()
++    session.post.side_effect = OSError("offline")
++    with patch.object(ponte_ia, "_groq") as groq:
++        with pytest.raises(ponte_ia.PonteIAError):
++            ponte_ia.responder("oi", session=session)
++    groq.assert_not_called()
