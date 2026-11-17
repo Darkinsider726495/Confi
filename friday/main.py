@@ -555,7 +555,11 @@ def main():
     falar("Sistemas online.")
     while True:
         if teclado:
-            t = input("você> ")
+            try:
+                t = input("você> ")
+            except EOFError:                     # Ctrl+D (ou fim da entrada): sai limpo; é o dono parando, como o parar.sh
+                print()
+                break
         else:
             ESTADO["estado"] = "em espera"
             VOZ.esperar_chamado()
