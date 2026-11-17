@@ -52,3 +52,4 @@ friday/.autonomia.json
 
 # Transformer exportado (scripts/exportar_transformer.py): ~100 MB, fica no aparelho
 modelos_ia/
+friday/.escuta.json

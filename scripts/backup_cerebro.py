@@ -20,71 +20,7 @@ try:
 except ImportError:
     pass
 import memoria as M
-
-FORA_SEMPRE = {".env", "auditoria.jsonl", ".friday-token", "token.txt"}
-
-
-def _destino_padrao():
-    d = Path(os.path.expanduser("~/storage/downloads"))
-    return d if d.is_dir() else ROOT
-
-
-def criar(saida=None, com_privado=False, agora=None):
-    """Cria o zip e devolve (caminho, quantos arquivos). Confere o zip depois de escrever."""
-    base = M.base()
-    if base is None or not base.is_dir():
-        raise SystemExit("Não achei o cofre da FRIDAY (memória desligada ou ainda vazia).")
-    saida = Path(saida) if saida else _destino_padrao()
-    saida.mkdir(parents=True, exist_ok=True)
-    nome = saida / time.strftime("FRIDAY-cerebro-%Y%m%d-%H%M%S.zip", time.localtime(agora))
-    n = 0
-    tmp = nome.with_suffix(".zip.parcial")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted(base.rglob("*")):
-            if not f.is_file() or f.is_symlink():
-                continue
-            rel = f.relative_to(base)
-            if f.name in FORA_SEMPRE or f.name.endswith((".tmp", ".parcial")):
-                continue
-            if not com_privado and rel.parts and rel.parts[0] == "Privado":
-                continue
-            z.write(f, "FRIDAY/" + rel.as_posix())
-            n += 1
-    with zipfile.ZipFile(tmp) as z:
-        ruim = z.testzip()
-    if ruim:
-        raise SystemExit(f"O zip saiu com defeito em {ruim}; tente de novo.")
-    os.replace(tmp, nome)
-    return nome, n
-
-
-def _seguro(nome):
-    p = PurePosixPath(nome)
-    return bool(p.parts) and p.parts[0] == "FRIDAY" and not p.is_absolute() and ".." not in p.parts and "\\" not in nome
-
-
-def restaurar(arq, agora=None):
-    """Renomeia o cérebro atual para FRIDAY-antes-DATA (nada é apagado) e extrai o backup no lugar. Devolve (antigo, quantos)."""
-    base = M.base()
-    if base is None:
-        raise SystemExit("A memória está desligada (OBSIDIAN_VAULT=off).")
-    with zipfile.ZipFile(arq) as z:
-        nomes = [i for i in z.infolist() if not i.is_dir()]
-        if not nomes or not all(_seguro(i.filename) for i in nomes):
-            raise SystemExit("Esse zip não é um backup do cérebro da FRIDAY (ou tem caminhos suspeitos). Nada foi mudado.")
-        antigo = None
-        if base.exists():
-            antigo = base.with_name(time.strftime("FRIDAY-antes-%Y%m%d-%H%M%S", time.localtime(agora)))
-            base.rename(antigo)
-        base.parent.mkdir(parents=True, exist_ok=True)
-        for i in nomes:
-            destino = base.parent / i.filename
-            destino.parent.mkdir(parents=True, exist_ok=True)
-            with z.open(i) as src, open(destino, "wb") as dst:
-                dst.write(src.read())
-    M._cache.clear() if hasattr(M, "_cache") else None
-    return antigo, len(nomes)
-
+from backup import criar, restaurar  # noqa: E402  (a lógica mora em friday/backup.py)
 
 def main():
     ap = argparse.ArgumentParser()

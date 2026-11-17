@@ -4,7 +4,7 @@
   python friday/main.py                 voz local (Raspberry Pi / PC): openWakeWord + Whisper + Piper
   python friday/main.py --diagnostico [--completo]   confere o ambiente e mostra o que falta
   python friday/main.py --link          mostra o endereço do painel (com a chave de acesso)"""
-import os, re, sys, json, time, hmac, secrets, threading, http.server, urllib.parse
+import os, shlex, re, sys, json, time, hmac, secrets, threading, http.server, urllib.parse
 from dotenv import load_dotenv
 BASE = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE, "..", ".env"))
@@ -27,6 +27,9 @@ import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
 import rotina as ROT  # GRU (rede recorrente) que aprende a rotina do dono pelo registro de atividades e prevê a próxima hora
+import backup as BK  # cópia de segurança do cérebro: sozinha 1x/semana e por voz
+import notificacoes as NOTI  # «o que chegou?»: resumo local das notificações (nada vai para a nuvem)
+import escuta as ESC  # «Friday, …» sem tocar na tela (escuta contínua pelo Android; só o dono liga)
 import significado as SIG  # rede neural própria (significado dos assuntos), treinada em 3 etapas: pré-treino, sinapses, feedback do dono
 import lembrancas as LB  # conversas profundas viram a ESSÊNCIA (escrita pela LLM), nunca a transcrição
 import assimilacao as ASS  # pré-córtex = registro; cada informação nova vira sinapse e o bruto vai embora (nunca vai para o disco)
@@ -192,6 +195,12 @@ def processar(t):
         if r is None:
             r = LB.tratar(t)  # «do que você lembra sobre X?», «quais suas lembranças?», «esqueça a lembrança sobre X»
         if r is None:
+            r = BK.tratar(t)  # «faça um backup», «quando foi o último backup?»
+        if r is None:
+            r = NOTI.tratar(t)  # «o que chegou?», «lê as do WhatsApp» (local, sem IA)
+        if r is None:
+            r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
+        if r is None:
             r = ROT.tratar(t)  # «como é a minha rotina?», «o que você acha que eu vou fazer agora?» (GRU; só prevê, não executa)
         if r is None:
             r = ASS.tratar(t)  # «o que você percebeu?»: padrões que ela assimilou sozinha
@@ -228,14 +237,34 @@ def _resumo_rag():
         return {"ligado": False, "disponivel": False}
 
 
+_FALHAS_PAINEL = {}
+
+
+def _seguro(nome, fn):
+    """Uma parte do painel que falha (um app do Termux que não respondeu, um módulo com erro) não pode apagar o painel inteiro."""
+    try:
+        return fn()
+    except Exception as e:
+        if _FALHAS_PAINEL.get(nome) != type(e).__name__:
+            _FALHAS_PAINEL[nome] = type(e).__name__
+            print(f"painel: a parte «{nome}» falhou ({type(e).__name__}); o resto continua.", flush=True)
+        return None
+
+
 def estado_completo(painel=True):
     if time.time() - _c["t"] > (15 if ANDROID else 5):
-        _c.update(t=time.time(), s=F.status_sistema())
-    return {**ESTADO, "sistema": _c["s"], "lembretes": F.lembretes_lista()[:5], "pendente": B.pendente_publico(),
-            "auditoria": B.ultimos(8), "auditoria_ok": B.verificar_auditoria()[0], "android": ANDROID or A.ativo(),
-            "metricas": T.PAINEL["metricas"], "clima": T.PAINEL["clima"], "leads": T.PAINEL["leads"], "protocolos": P.resumo(),
-            "ia": T.MODO_IA["v"], "uptime": int(time.time() - T.INICIO), "foco": F.silencio_ativo(), "tratamento": F.tratamento(),
-            "ferramentas": len(B.FERRAMENTAS), "voz": {"stt": VR.stt_ativo(), "tts": VR.tts_ativo()}, "memoria": {**MEM.resumo(), **N.resumo()}, "ui": N.UI, "autonomia": AUT.resumo(), "mae": MAE.resumo(), "vida": V.painel(), "curiosidade": CUR.resumo(), "conversa": CONV.resumo(), "visao": VIS.resumo(painel=painel), "maos": MAOS.resumo(), "prefrontal": PFC.resumo(), "nucleo": NC.painel(), "tarefas": TAR.resumo(), "experiencias": XP.resumo(), "objetivos": OBJ.resumo(), "coordenacao": COORD.resumo(), "retomada": RET.resumo(), "precortex": PC.resumo(), "busca_semantica": _resumo_rag()}
+        _c.update(t=time.time(), s=_seguro("sistema", F.status_sistema))
+    partes = {
+        "lembretes": lambda: F.lembretes_lista()[:5], "pendente": B.pendente_publico, "auditoria": lambda: B.ultimos(8),
+        "auditoria_ok": lambda: B.verificar_auditoria()[0], "android": lambda: ANDROID or A.ativo(),
+        "metricas": lambda: T.PAINEL["metricas"], "clima": lambda: T.PAINEL["clima"], "leads": lambda: T.PAINEL["leads"], "protocolos": P.resumo,
+        "ia": lambda: T.MODO_IA["v"], "uptime": lambda: int(time.time() - T.INICIO), "foco": F.silencio_ativo, "tratamento": F.tratamento,
+        "ferramentas": lambda: len(B.FERRAMENTAS), "voz": lambda: {"stt": VR.stt_ativo(), "tts": VR.tts_ativo()},
+        "memoria": lambda: {**MEM.resumo(), **N.resumo()}, "ui": lambda: N.UI, "autonomia": AUT.resumo, "mae": MAE.resumo, "vida": V.painel,
+        "curiosidade": CUR.resumo, "conversa": CONV.resumo, "visao": lambda: VIS.resumo(painel=painel), "maos": MAOS.resumo, "prefrontal": PFC.resumo,
+        "nucleo": NC.painel, "tarefas": TAR.resumo, "experiencias": XP.resumo, "objetivos": OBJ.resumo, "coordenacao": COORD.resumo,
+        "retomada": RET.resumo, "precortex": PC.resumo, "busca_semantica": _resumo_rag}
+    return {**ESTADO, "sistema": _c["s"], **{k: _seguro(k, f) for k, f in partes.items()}}
 
 
 def _retomar_ao_iniciar():
@@ -255,14 +284,15 @@ def _em_thread(fn, *a):
 class HUD(http.server.BaseHTTPRequestHandler):
     timeout = 30
 
-    def _cabecalhos(self, tipo, n):
+    def _cabecalhos(self, tipo, n, quadro=False):
         self.send_header("Content-Type", tipo)
         self.send_header("Content-Length", str(n))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Frame-Options", "SAMEORIGIN" if quadro else "DENY")   # só a Mente 3D pode ir dentro do PRÓPRIO painel
         self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
+                         + ("frame-ancestors 'self'" if quadro else "frame-ancestors 'none'"))
 
     def _json(self, o, code=200):
         b = json.dumps(o).encode()
@@ -334,7 +364,7 @@ class HUD(http.server.BaseHTTPRequestHandler):
             with open(os.path.join(BASE, "mente.html"), "rb") as f:
                 b = f.read()
             self.send_response(200)
-            self._cabecalhos("text/html; charset=utf-8", len(b))
+            self._cabecalhos("text/html; charset=utf-8", len(b), quadro=True)
             self.end_headers()
             return self.wfile.write(b)
         if p == "/rede":  # rede neural em camadas (visual): a página só confere o host; os dados que ela lê exigem a chave
@@ -517,7 +547,9 @@ def iniciar_http(host, porta):
 def _notificacao_painel(porta, link):
     # sem botão «Confirmo» aqui: uma notificação permanente confirmaria QUALQUER ação pendente. O botão nasce junto com cada pendência (_notificar_pendencia).
     acao = os.path.join(BASE, "acao.sh")
-    A.notificar_local("FRIDAY online", "Toque para abrir o painel.", id="friday-painel", abrir=f"termux-open-url {link}",
+    # «am start» abre o navegador a partir do próprio Termux (com «Aparecer sobre outros apps» ligado no Termux); se não der, tenta o termux-open-url
+    abrir = f"am start -a android.intent.action.VIEW -d {shlex.quote(link)} >/dev/null 2>&1 || termux-open-url {shlex.quote(link)}"
+    A.notificar_local("FRIDAY online", "Toque para abrir o painel.", id="friday-painel", abrir=abrir,
                       botoes=[("Falar", f"sh {acao} ouvir"), ("Cancelar", f"sh {acao} cancelar")])
 
 
@@ -555,6 +587,9 @@ def main():
             _notificacao_painel(porta, link)
         except Exception as e:
             print("sem notificação:", e, flush=True)
+    F.GANCHOS.append(BK.gancho)  # backup semanal do cérebro, sozinha
+    if ANDROID:
+        threading.Thread(target=ESC.laco, args=(processar, falar, lambda: ESTADO.get("estado")), daemon=True).start()  # escuta contínua (se o dono ligou)
     threading.Thread(target=F.proativo, args=(lambda m: falar(m, proativo=True),), daemon=True).start()
     threading.Thread(target=T.laco_painel, daemon=True).start()
     threading.Thread(target=N.laco_sono, kwargs={"autorizado": lambda: AUT.modo() != "desligada"}, daemon=True).start()  # sono diário + devaneios

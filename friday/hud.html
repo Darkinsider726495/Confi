@@ -94,10 +94,11 @@ label{font-size:12px;color:var(--mut);margin:6px 8px;display:inline-block}#vm{co
 <g class="gira"><circle class="seg" cx="160" cy="160" r="124"/></g><g class="gira rev"><circle class="tks" cx="160" cy="160" r="108"/></g>
 <circle class="coroa" cx="160" cy="160" r="88"/><circle class="anel a3" cx="160" cy="160" r="66"/><circle class="nucleo" cx="160" cy="160" r="60"/>
 <polygon class="tri" points="160,121 195,181 125,181"/><circle class="miolo" cx="160" cy="160" r="11"/></svg>
+<iframe id="mente3d" title="Mente 3D" style="display:none;width:min(420px,92vw);height:min(420px,52vh);border:0;background:transparent" loading="lazy"></iframe>
 <h1>FRIDAY</h1><div id="e">iniciando</div><div id="onda" aria-hidden="true"></div><div id="v"></div><div id="f" aria-live="polite"></div>
 <div id="ctl"><input id="txt" type="text" placeholder="Digite um pedido ou fale" autocomplete="off" maxlength="900" aria-label="Pedido"><button onclick="digitado()">Enviar</button></div>
 <div class="btns"><button id="bt" onclick="toque()">Falar (toque)</button><button id="bc" class="x" onclick="escutar()">Iniciando a escuta…</button><button id="bo" class="x" style="display:none" onclick="nativo()">Ouvir pelo Android</button></div>
-<div class="btns"><button id="bmente" onclick="location.href='/mente'" title="As camadas reais da mente dela em 3D, com os neurônios e as sinapses de verdade">◈ Mente 3D</button></div>
+<div class="btns"><button id="bmente" onclick="location.href='/mente'" title="As camadas reais da mente dela em 3D, com os neurônios e as sinapses de verdade">◈ Mente 3D</button><button id="bvis" class="x" onclick="visual(!vis3d)">visual: 3D</button></div>
 <div id="prot" aria-label="Protocolos"></div>
 <div><label><input type="checkbox" id="tl" onchange="mesa(this.checked)"> Modo mesa (tela ligada e escura)</label></div>
 <div id="vpw" style="display:none"><label><input type="checkbox" id="vp" checked onchange="vpMuda(this.checked)"> Voz privada (seu servidor, sem Google)</label></div>
@@ -225,6 +226,10 @@ function mostra(t){const f=$('f');if(f.textContent!==t){f.textContent=t;f.classL
 async function enviar(t){ocupado=true;$('v').textContent='Você: '+t;mostra('…');const r=await api('/falar',{texto:t});mostra(r.ok?r.resposta:(r.msg||'Erro'));if(!r.ok)ocupado=false}
 function digitado(){const t=$('txt').value.trim();if(t){$('txt').value='';enviar(t)}}
 $('txt').addEventListener('keydown',e=>{if(e.key=='Enter')digitado()});
+let vis3d=true;try{vis3d=localStorage.getItem('friday_visual')!=='classico'}catch(_){}
+function visual(on){vis3d=on;try{localStorage.setItem('friday_visual',on?'3d':'classico')}catch(_){}const f=$('mente3d');
+ if(on&&!f.src)f.src='/mente?embed=1';f.style.display=on?'block':'none';$('reator').style.display=on?'none':'';$('bvis').textContent='visual: '+(on?'3D':'clássico')}
+addEventListener('load',()=>visual(vis3d));
 async function nativo(){msg('Ouvindo pelo Android…');const r=await api('/ouvir',{});msg(r.ok?'':r.msg);if(r.ok){$('v').textContent='Você: '+r.voce;mostra(r.resposta)}}
 async function protocolo(n){ocupado=true;$('v').textContent='Protocolo: '+n;mostra('…');const r=await api('/protocolo',{nome:n});mostra(r.ok?r.resposta:(r.msg||'Erro'));if(!r.ok)ocupado=false}
 async function ok(){const r=await api('/confirmar',{pin:$('pin').value});$('pm').textContent=r.msg;$('pin').value=''}
@@ -274,15 +279,15 @@ function pinta(s){
  $('sis').textContent=s.sistema||'';$('up').textContent='no ar '+dur(s.uptime||0);$('trat').textContent=(s.tratamento||'chefe').toUpperCase();
  if(cl){$('ct').textContent=cl.temp+'°';$('cd').firstChild.textContent=cl.descricao;$('cd').lastChild.textContent='máx '+cl.max+'° · mín '+cl.min+'° · chuva '+cl.chuva+'%';$('cl').textContent=cl.local}
  const L=s.leads;$('pleads').style.display=L?'':'none';if(L){$('ln').textContent=L.n;$('lnn').textContent=L.n?L.nomes.join(' · '):'nenhum lead novo'}
- $('lem').replaceChildren(...(s.lembretes.length?s.lembretes:[['','Agenda livre']]).map(l=>{const li=document.createElement('li');li.textContent=(l[0]?l[0]+'  ':'')+l[1];return li}));
+ $('lem').replaceChildren(...((s.lembretes||[]).length?s.lembretes:[['','Agenda livre']]).map(l=>{const li=document.createElement('li');li.textContent=(l[0]?l[0]+'  ':'')+l[1];return li}));
  $('ao').textContent=s.auditoria_ok?'● ÍNTEGRA':'✖ ADULTERADA';$('ao').className=s.auditoria_ok?'ok':'neg';$('nf').textContent=s.ferramentas+' ferramentas · níveis de risco 0–4 · nada executa sem o corretor';
  const ok_=new Set(['automatico','iniciado','executado']),pen_=new Set(['pendente','pausado']);
- $('aud').replaceChildren(...s.auditoria.slice().reverse().map(a=>{const li=document.createElement('li'),d=a.decisao||'',n=document.createElement('span'),x=document.createElement('span'),y=document.createElement('span');
+ $('aud').replaceChildren(...(s.auditoria||[]).slice().reverse().map(a=>{const li=document.createElement('li'),d=a.decisao||'',n=document.createElement('span'),x=document.createElement('span'),y=document.createElement('span');
   li.className=d.startsWith('confirmado')||ok_.has(d)?'ok':pen_.has(d)?'pen':'neg';n.className='t';n.textContent=a.ts.slice(11);x.textContent=a.ferramenta||'';y.textContent=(a.nivel!=null?'N'+a.nivel+' ':'')+d;li.append(n,x,y);return li}));
  if(s.ui){const prim=pinta.ui===undefined;if(s.ui.id!==pinta.ui){pinta.ui=s.ui.id;if(!prim&&s.ui.abrir=='cerebro')cerebro()}}
  const me=s.memoria,mOn=!!(me&&me.ativo);$('pmem').style.display=mOn?'':'none';
  if(mOn){$('mn').textContent=pl(me.neuronios,'neurônio','neurônios')+' · '+pl(me.sinapses,'sinapse','sinapses');$('mp').textContent='Cofre do Obsidian: '+me.pasta;
-  $('mr').replaceChildren(...(me.recentes.length?me.recentes:['Nada guardado ainda. Diga: lembre que…']).map(n=>{const li=document.createElement('li'),a=document.createElement('span');a.textContent=n;li.append(a);return li}))}
+  $('mr').replaceChildren(...((me.recentes||[]).length?me.recentes:['Nada guardado ainda. Diga: lembre que…']).map(n=>{const li=document.createElement('li'),a=document.createElement('span');a.textContent=n;li.append(a);return li}))}
  const pf=s.prefrontal;if(pf&&pf.impulsos){$('ppfc').style.display='';const ag=pf.agir||[];$('pcn').textContent=ag.length>1?'tudo ao mesmo tempo':ag.length?'agindo':'atenta';
   $('pcd').textContent=pf.limiar==null?'Pensando…':'Cada vontade é decidida por si; quem escolhe sou eu. Limiar '+Math.round(pf.limiar*100)+'%.';
   $('pci').replaceChildren(...Object.entries(pf.impulsos).map(([n,x])=>{const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span'),f=document.createElement('i'),c=document.createElement('span');a.textContent=n;b.className='bar';f.style.width=Math.max(0,Math.min(100,x.valor))+'%';if(x.decisao==='não posso')c.className='nao';c.textContent=x.decisao==='agir'?'agir':x.decisao==='não posso'?'não posso':'quieta';b.append(f);li.append(a,b,c);return li}));

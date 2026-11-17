@@ -112,6 +112,35 @@ def _uptime(seg):
     return f"{h} horas" + (f" e {m} minutos" if m else "")
 
 
+def _briefing_extras():
+    """O que ela aprendeu e o que chegou: rotina prevista (GRU, só se confiável), notificações (só quantas e de onde) e o backup."""
+    out = []
+    try:
+        import rotina as R
+        m = R.carregar()
+        if m and m[1].get("confiavel"):
+            prev = [(R._nome(r), c) for r, c in R.previsao() if c >= 0.4][:2]
+            if prev:
+                out.append("Pela sua rotina, na próxima hora o mais provável é " + " e ".join(f"{n} ({round(c * 100)}%)" for n, c in prev) + ".")
+    except Exception:
+        pass
+    try:
+        import notificacoes as NOTI
+        r = NOTI.resumo_curto()
+        if r:
+            out.append("No celular: " + r)
+    except Exception:
+        pass
+    try:
+        import backup as BK
+        t, _ = BK.ultimo()
+        if BK.dias() and t and (time.time() - t) / 86400 > BK.dias() + 2:
+            out.append("A cópia de segurança do meu cérebro está atrasada; diga «faça um backup».")
+    except Exception:
+        pass
+    return out
+
+
 def briefing(agora=None):
     """Briefing falado, sem usar a IA: hora, clima, agenda, leads e saúde dos sistemas."""
     agora = agora or dt.datetime.now()
@@ -131,6 +160,8 @@ def briefing(agora=None):
         p.append(f"Você tem {len(lem)} {'lembrete' if len(lem) == 1 else 'lembretes'}: " + "; ".join(f"{h}, {x}" for h, x in lem[:3]) + ".")
     else:
         p.append("Sua agenda está livre, sem lembretes pendentes.")
+    for extra in _briefing_extras():
+        p.append(extra)
     try:
         L = leads_painel()
     except Exception:
