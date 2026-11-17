@@ -47,13 +47,16 @@ def modelo_groq(modelo):
 def main():
     import cerebro as C
     print("Onde ela gasta o tempo:")
-    cronometro("memória + significado (contexto)", lambda: C._memoria_completa("como foi a prova de SQL?"))
+    cronometro("memória (1ª vez: carrega o Transformer)", lambda: C._memoria_completa("como foi a prova de SQL?"))
+    cronometro("memória (já carregada, como no uso)", lambda: C._memoria_completa("o que eu fiz ontem?"))
     if (os.getenv("IA_PROVEDOR") or "").lower() != "groq" or not os.getenv("GROQ_API_KEY"):
         print("A Groq não está configurada (rode scripts/conectar_groq.py).")
         return 0
     import provedor_groq as G
     atual = os.getenv("GROQ_MODEL") or G.DEFAULT_MODEL
     cronometro(f"Groq · {atual}", lambda: modelo_groq(atual))
+    import broker as B
+    cronometro("Groq + ferramentas (como no painel)", lambda: C._nuvem([{"role": "user", "content": PERGUNTA}], B.Turno(), C._system()))
     if "--comparar" in sys.argv:
         import requests
         r = requests.get("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"}, timeout=20)

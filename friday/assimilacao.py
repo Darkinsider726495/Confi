@@ -167,6 +167,11 @@ def assimilar(origem, texto, t=None):
 
 
 def _laco():
+    try:
+        import significado as SIG
+        SIG.indexar()            # aquece já na partida: carrega o Transformer e indexa as notas, para a 1ª resposta não esperar por isso
+    except Exception:
+        pass
     while True:
         try:
             origem, texto, t = _FILA.get(timeout=60)
