@@ -49,6 +49,13 @@ Esperado: `transformer 0.66`. Sem o zip do modelo, ela usa a rede própria (trei
 Se o `pkg` reclamar de `curl` («CANNOT LINK EXECUTABLE»), rode antes `apt update && apt full-upgrade -y`.
 Depois ela se reajusta sozinha a cada 6 h. Pergunte: «o que é parecido com treino?». Corrija: «treino não tem nada a ver com prova».
 
+## 3c. GRU da rotina (atualização 5)
+```bash
+pkg install -y python-numpy
+python scripts/treinar_rotina.py       # nos primeiros dias: «preciso de pelo menos 7 dias»; depois treina sozinha 1x/dia
+```
+Pergunte: «como é a minha rotina?» ou «o que você acha que eu vou fazer agora?». Detalhes em `docs/ROTINA.md` e no guia em PDF.
+
 ## 4. Conferir que está tudo certo (opcional, ~2 min)
 ```bash
 python -m compileall -q friday
