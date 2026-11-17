@@ -783,18 +783,27 @@ def falar_metas():
     return t
 
 
+def _agrupar(rotulos, maximo=5):
+    """Junta itens iguais com a contagem («o que você disse (pedido) ×5»), na ordem em que aparecem; mostra até `maximo` grupos."""
+    cont = {}
+    for r in rotulos:
+        cont[r] = cont.get(r, 0) + 1
+    itens = [f"{r} ×{n}" if n > 1 else r for r, n in cont.items()]
+    return itens[:maximo] + ([f"mais {len(itens) - maximo} tipo(s)"] if len(itens) > maximo else [])
+
+
 def falar_foco():
     """O pré-córtex responde pelo foco: a memória de trabalho dele + o que assimilou da atenção do núcleo + o registro de hoje."""
     f = foco()
     nomes = {"fala": "o que você disse", "visao": "uma olhada", "estudo": "um estudo", "maos": "as suas mãos", "meta": "uma meta", "sistema": "o sistema"}
     if f:
-        partes = ["Estou com a atenção em " + _lista(f"{nomes.get(i['origem'], i['origem'])} ({i['tipo']})" for i in f[:5]) + (f" e mais {len(f) - 5}." if len(f) > 5 else ".")]
+        partes = ["Estou com a atenção em " + _lista(_agrupar(f"{nomes.get(i['origem'], i['origem'])} ({i['tipo']})" for i in f)) + "."]
     else:
         partes = ["Meu foco está vazio agora: nada novo chamou a minha atenção."]
     rot = {"fala": "você falou", "maos": "gesto das mãos", "visao": "eu vi", "sistema": "o sistema avisou", "web": "li na internet", "interno": "eu mesma"}
     ult = atividades()["ultimas"]
     if ult:                                                    # o que o núcleo notou por último (chegou pela assinatura; o pré-córtex não importa o núcleo)
-        partes.append("O núcleo notou por último: " + _lista(f"{rot.get(x['origem'], x['origem'])} ({x['tipo']})" + ("" if x["confiavel"] else ", não verificado") for x in reversed(ult[-4:])) + ".")
+        partes.append("O núcleo notou por último: " + _lista(_agrupar(f"{rot.get(x['origem'], x['origem'])} ({x['tipo']})" + ("" if x["confiavel"] else ", não verificado") for x in reversed(ult[-8:]))) + ".")
     a = atividades()
     if a["hoje"]:
         partes.append(f"Registrei {a['hoje']} atividade{'s' if a['hoje'] != 1 else ''} hoje (" + ", ".join(f"{nomes.get(o, o)}: {n}" for o, n in sorted(a["por_origem"].items(), key=lambda p: -p[1])) + ").")
