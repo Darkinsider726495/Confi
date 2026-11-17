@@ -172,6 +172,13 @@ def _memoria_completa(texto):
         except Exception:
             pass
         try:
+            import significado as SIG
+            sig = SIG.contexto(texto, bloco)               # rede neural: notas do dono parecidas em SENTIDO (não só por palavra)
+            if sig:
+                bloco = (bloco + "\n" + sig).strip()
+        except Exception:
+            pass
+        try:
             import lembrancas as LB
             lemb = LB.contexto(texto)                     # conversas profundas anteriores sobre este assunto: continuidade
             if lemb:

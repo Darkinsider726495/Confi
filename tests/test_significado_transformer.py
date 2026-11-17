@@ -125,6 +125,46 @@ class Transformer(Base):
         self.topicos("Academia")
         self.assertIn("musculação", S.tratar("o que é parecido com musculação?"))
 
+    def nota(self, pasta, titulo, corpo, privado=False):
+        import memoria as MEM
+        self.base(pasta).mkdir(parents=True, exist_ok=True)
+        meta = "privado: true\n" if privado else ""
+        self.base(pasta, titulo + ".md").write_text(f"---\ntipo: nota\n{meta}---\n# {titulo}\n\n{corpo}\n", encoding="utf-8")
+        MEM._cache.clear()
+
+    def test_busca_acha_pelo_sentido_so_nas_notas_do_dono(self):
+        self.nota("Topicos", "Academia", "musculacao treino")
+        self.nota("Memorias", "Consultas", "sql joins")
+        self.nota("Estudos", "Treino na internet", "treino musculacao academia")      # de terceiros: fora da busca
+        self.nota("Visao", "Vi uma academia", "academia treino")                       # câmera: fora da busca
+        r = S.buscar_por_significado("treino", n=5, minimo=-1)
+        titulos = [t for o, t, sc, tr in r]
+        self.assertEqual(titulos[0], "Academia")
+        self.assertNotIn("Treino na internet", titulos)
+        self.assertNotIn("Vi uma academia", titulos)
+
+    def test_nota_privada_nao_entra(self):
+        self.nota("Memorias", "Segredo", "treino musculacao", privado=True)
+        self.assertEqual([t for _, t, _, _ in S.buscar_por_significado("treino", minimo=-1)], [])
+
+    def test_indice_acompanha_mudanca_e_arquivo(self):
+        self.nota("Topicos", "Academia", "musculacao")
+        self.assertEqual(S.indexar(), 1)
+        self.nota("Topicos", "Consultas", "sql")
+        self.assertEqual(S.indexar(), 2)
+        self.base("Topicos", "Consultas.md").rename(self.base("Topicos", "..", "Consultas-arquivada.md"))   # «foi para o Arquivo»
+        self.assertEqual(S.indexar(), 1)
+
+    def test_contexto_nao_repete_o_que_a_busca_por_palavra_ja_trouxe(self):
+        self.nota("Topicos", "Academia", "musculacao treino")
+        self.assertIn("Academia", S.contexto("treino"))
+        self.assertEqual(S.contexto("treino", ja_no_bloco="- [topico] Academia: ..."), "")
+
+    def test_a_ia_recebe_o_parecido_em_significado(self):
+        import cerebro as C
+        self.nota("Topicos", "Academia", "musculacao treino")
+        self.assertIn("PARECIDO EM SIGNIFICADO", C._memoria("musculacao"))
+
     def test_sem_o_modelo_volta_para_a_rede_propria(self):
         with mock.patch.dict(os.environ, {"SIGNIFICADO_TRANSFORMER": tempfile.mkdtemp(dir=E.TMP)}):
             S._tr.update(dir=None)

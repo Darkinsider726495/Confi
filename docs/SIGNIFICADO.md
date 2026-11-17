@@ -16,6 +16,24 @@ Tamanho da base: 2.706 palavras × 64 dimensões ≈ 173 mil parâmetros (um mod
 - **Ajuste sozinho:** a cada 6 h, no tempo ocioso, ela refaz a etapa 2/3 com as sinapses e o feedback novos.
 - A rede **só sugere ligações**: não decide nem executa nada.
 
+## Busca por significado no cofre
+Quando você fala com ela, além da busca por palavra igual, ela procura nas **suas** notas (Memorias, Lembrancas, Topicos) as que tratam do **mesmo assunto com outras palavras** e põe no contexto da IA («PARECIDO EM SIGNIFICADO», rotulado como dado).
+Estudos (internet) e Visao (câmera) ficam **fora** de propósito: são conteúdo de terceiros, e a busca normal os marca como contaminação. Notas privadas também ficam fora. O índice acompanha o que muda, no tempo ocioso.
+
+Medido com o MiniLM real, sem nenhuma palavra em comum com a nota certa:
+
+| Pergunta | Nota achada | Parecença |
+|---|---|---|
+| «tô exausto, não consigo descansar direito» | Sono ruim | 0,54 |
+| «como vai a minha prova de consultas?» | Banco de dados | 0,43 |
+| «quero tocar um instrumento musical» | Guitarra | 0,56 |
+| «preciso comprar um presente pra minha mãe» | Aniversário da mãe | 0,46 |
+| «vou pedir demissão?» | Projeto (lembrança) | 0,58 |
+| «me recomenda uma bebida quente pela manhã» | Gosto de café | 0,73 |
+| «qual a capital da França?» | — (máx. 0,19) | |
+
+O corte é **0,40** (`LIMIAR_BUSCA`): fica com todos os acertos e tira o segundo colocado ruidoso (até 0,36).
+
 ## Com um Transformer pré-treinado (opcional, recomendado)
 A etapa 1 pode vir **pronta** de um Transformer aberto, treinado com bilhões de palavras — como o pré-treino de um modelo grande:
 

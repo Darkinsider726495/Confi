@@ -177,6 +177,11 @@ def _laco():
             except Exception:
                 pass
             try:
+                import significado as SIG
+                SIG.indexar()                                    # busca por significado: índice em dia no tempo ocioso (só o que mudou)
+            except Exception:
+                pass
+            try:
                 if time.time() - _ajuste["t"] > AJUSTE_A_CADA_S:   # etapa 2/3 da rede de significado, sozinha, no tempo ocioso
                     _ajuste["t"] = time.time()
                     import significado as SIG
