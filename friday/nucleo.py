@@ -1,17 +1,20 @@
 """Núcleo da FRIDAY: a ARQUITETURA dela, inspirada em como o cérebro organiza o trabalho (e não no formato dele).
 
-O que já existia: sentidos, memória (cofre), estado interno, curiosidade, conversa, sono e o corretor que decide o que se executa. Cada laço de fundo decidia
-sozinho, pelo próprio relógio. O que este módulo acrescenta são as três peças que faltavam para esses pedaços trabalharem como UM sistema:
-
+Peças:
   1. ATENÇÃO (inspirada no tálamo). Todo sinal que chega (fala, visão, mãos, sistema, internet) recebe uma saliência: peso da origem x novidade x estado de atenção.
      A novidade cai com a repetição (HABITUAÇÃO: o que se repete deixa de ser notado) e volta com o tempo. Seu pedido nunca é ignorado; um gesto repetido, sim.
   2. ESPAÇO DE TRABALHO (inspirado na memória de trabalho / espaço global). Só o que foi notado entra no FOCO, que tem poucas vagas e disputa por elas.
-     Quem entra é anunciado aos assinantes; quem sai do foco NÃO é apagado: o conhecimento mesmo já foi guardado pela fonte (cofre, diário, neurônios).
-  3. SELEÇÃO DE IMPULSOS (inspirada nos gânglios da base). Estudar, conversar e olhar não acontecem ao mesmo tempo: enquanto um age, os outros esperam, e depois
-     de um agir há uma pausa curta (inibição). Responder a você e dormir (consolidar) seguram os demais.
+     Quem entra é anunciado aos assinantes (o pré-córtex assimila e registra); quem sai do foco NÃO é apagado: o conhecimento já foi guardado pela fonte.
+  3. ATIVIDADE EM PARALELO. Nada aqui é fila: estudar, conversar, olhar, sonhar e responder rodam ao mesmo tempo. O núcleo só observa (`agir`, `ocupado`);
+     quem protege recurso que não pode ser usado por dois ao mesmo tempo é o coordenador.
+  4. SISTEMA DISTRIBUÍDO DENTRO DO NÚCLEO. `iniciar()` sobe, junto com o núcleo, o pré-córtex distribuído (hub + nove neurônios; cada objetivo na sua linha)
+     e o ciclo autônomo. Ações locais de baixo impacto o hub já executa sem esperar o dono; as de risco esperam a autorização dele.
+  5. AUTONOMIA TOTAL (pedida pelo dono). Só o dono liga/desliga, por voz («liga a autonomia total» / «desliga a autonomia total»; «sim»/«pode» nunca ligam).
+     Ligada, o núcleo aprova SOZINHO os objetivos que ela mesma propõe, de nível ≤ 1 e sem ação fora do aparelho, e os executa em paralelo, sem esperar ordem.
+     Nível 2+ (mensagem, ligação, arquivo do dono, dinheiro) continua pedindo o dono: o corretor não é contornado. Desligada (o padrão), tudo é como antes.
 
-O que NÃO é: este módulo não executa nada, não tem ferramenta, não liga nem desliga a curiosidade, a conversa, a câmera ou a FRIDAY, e não mexe no corretor. Ele só decide
-o que merece atenção e quem espera a vez. Não é consciência nem biologia: é um modelo para organizar o código (docs/NUCLEO.md)."""
+O que NÃO é: não tem ferramenta da IA, não executa ação do corretor por conta própria, não liga nem desliga a curiosidade, a conversa, a câmera ou a FRIDAY.
+Não é consciência nem biologia: é um modelo para organizar o código (docs/NUCLEO.md)."""
 import os, re, time, threading, contextlib
 from collections import deque
 
@@ -57,10 +60,6 @@ def meia_vida_s():
 
 def limiar():
     return _num("NUCLEO_LIMIAR", 0.25)
-
-
-def inibicao_s():
-    return _num("NUCLEO_INIBICAO_S", 20.0)
 
 
 def _atencao():
@@ -163,10 +162,11 @@ def foco(agora=None):
 
 def assinar(ao_entrar=None, ao_sair=None):
     """Quem quiser saber do que entra no foco (ou sai dele) se inscreve aqui. As funções recebem o sinal; erro delas nunca atrapalha."""
-    if ao_entrar:
-        _ao_entrar.append(ao_entrar)
-    if ao_sair:
-        _ao_sair.append(ao_sair)
+    with _lock:                                   # a mesma função assinada duas vezes recebe cada sinal uma vez só
+        if ao_entrar and ao_entrar not in _ao_entrar:
+            _ao_entrar.append(ao_entrar)
+        if ao_sair and ao_sair not in _ao_sair:
+            _ao_sair.append(ao_sair)
 
 
 # ---------------------------------------------------------------- seleção de impulsos
@@ -208,6 +208,96 @@ def esperando(agora=None):
     return [n for n in IMPULSOS if not liberar(n, agora)]
 
 
+# ---------------------------------------------------------------- autonomia total e sistema distribuído (dentro do núcleo)
+def _limpar_auto(lido, padrao):
+    padrao["autonomia_total"] = lido.get("autonomia_total") is True
+    padrao["mudou_em"] = lido.get("mudou_em") if isinstance(lido.get("mudou_em"), (int, float)) else None
+    return padrao
+
+
+_AUTO = None
+_EXEC = set()                          # propostas que o ciclo autônomo está executando agora
+_MAX_PARALELO = 4                      # objetivos próprios ao mesmo tempo (cada um na sua linha)
+_ini = {"feito": False, "hub": None, "erro": ""}
+
+
+def _arq_auto():
+    global _AUTO
+    if _AUTO is None:
+        import estado as ES
+        _AUTO = ES.Arq("nucleo_autonomia", {"autonomia_total": False, "mudou_em": None}, _limpar_auto)
+    return _AUTO
+
+
+def autonomia_total():
+    """Ligada só pelo dono, por voz. Padrão: desligada."""
+    try:
+        return bool(_arq_auto().get()["autonomia_total"])
+    except Exception:
+        return False
+
+
+def _definir_autonomia(ligar):
+    a = _arq_auto()
+    with a.trava:
+        a.get().update(autonomia_total=bool(ligar), mudou_em=_agora())
+        a.salvar()
+
+
+def ciclo_autonomo():
+    """Uma volta: com a autonomia total ligada, aprova e executa EM PARALELO os objetivos que ela propôs (nível ≤ 1, nada fora do aparelho).
+    Cada um roda na sua linha; o que já está rodando não é disparado de novo. Devolve os ids disparados nesta volta."""
+    if not autonomia_total():
+        return []
+    import objetivos as OBJ
+    disparados = []
+    for p in OBJ.listar(("proposto",)):
+        oid = p["id"]
+        with _lock:
+            if oid in _EXEC or len(_EXEC) >= _MAX_PARALELO:
+                continue
+            _EXEC.add(oid)
+
+        def rodar(oid=oid):
+            try:
+                with agir("objetivo_proprio"):
+                    OBJ.aprovar_pela_autonomia(oid)
+            except Exception:
+                pass
+            finally:
+                with _lock:
+                    _EXEC.discard(oid)
+        threading.Thread(target=rodar, name=f"nucleo-auto-{oid}", daemon=True).start()
+        disparados.append(oid)
+    return disparados
+
+
+def _laco_autonomo(intervalo=30.0):
+    while True:
+        try:
+            ciclo_autonomo()
+        except Exception:
+            pass
+        time.sleep(intervalo)
+
+
+def iniciar():
+    """Chamado UMA vez na partida (main.py): o sistema distribuído nasce dentro do núcleo, sempre ligado, e o ciclo autônomo começa a girar
+    (ele só age com a autonomia total ligada pelo dono). Nunca derruba a partida: erro fica em `painel()["distribuido"]`."""
+    with _lock:
+        if _ini["feito"]:
+            return dict(_ini)
+        _ini["feito"] = True
+    try:
+        import pre_cortex.fachada as PC
+        PC.hub()
+        _ini["hub"] = True
+    except Exception as e:
+        _ini.update(hub=False, erro=f"{type(e).__name__}: {e}"[:200])
+    threading.Thread(target=_laco_autonomo, name="nucleo-autonomia", daemon=True).start()
+    return dict(_ini)
+
+
 # ---------------------------------------------------------------- painel e fala
 def painel(agora=None):
     t = _agora() if agora is None else agora
@@ -215,7 +305,9 @@ def painel(agora=None):
         habito = sorted(((k, round(_contagem(k, t), 2)) for k in _h), key=lambda x: -x[1])[:3]
         c = {"notados": _conta["notados"], "ignorados": _conta["ignorados"], "saiu": _conta["saiu"], "hoje": dict(_conta["hoje"])}
     return {"ligado": ligado(), "foco": [{"origem": x["origem"], "tipo": x["tipo"], "resumo": x["resumo"], "peso": x["peso"], "confiavel": x["confiavel"]} for x in foco(t)],
-            "vagas": vagas(), "ocupado": ocupado(t), "esperando": esperando(t), "habituado": [{"chave": k, "n": n} for k, n in habito if n >= 1.5], **c}
+            "vagas": vagas(), "ocupado": ocupado(t), "esperando": esperando(t), "habituado": [{"chave": k, "n": n} for k, n in habito if n >= 1.5], **c,
+            "autonomia_total": autonomia_total(), "objetivos_em_execucao": sorted(_EXEC),
+            "distribuido": {"iniciado": _ini["feito"], "hub": _ini["hub"], "erro": _ini["erro"]}}
 
 
 _ROTULO = {"fala": "você falou", "maos": "gesto das mãos", "visao": "eu vi", "sistema": "o sistema avisou", "web": "li na internet", "interno": "eu mesma"}
@@ -225,19 +317,36 @@ _ARQ = re.compile(r"^(?:(?:friday|jarvis|fraide)[ ,]+)?(?:(?:como (?:e|funciona)
                   r"(?:o que e|como funciona) (?:o )?(?:seu )?nucleo)(?: agora)?[ .!?]*$")
 
 
+_P = r"^(?:(?:friday|jarvis|fraide)[ ,]+)?"
+_AUTO_LIGA = re.compile(_P + r"(?:liga|ligue|ligar|ativa|ative|ativar)(?: a)? autonomia total[ .!]*$")
+_AUTO_DESLIGA = re.compile(_P + r"(?:desliga|desligue|desligar|desativa|desative|desativar)(?: a)? autonomia total[ .!]*$")
+_AUTO_STATUS = re.compile(_P + r"(?:como esta (?:a )?autonomia total|a autonomia total esta ligada|status da autonomia total)[ ?]*$")
+
+
 def tratar(texto):
-    """«no que você está focada?» e «como é a sua arquitetura?»: respostas prontas (sem IA), com os números do momento."""
+    """Autonomia total (só o dono, por voz), «no que você está focada?» (reserva: o pré-córtex responde antes) e «como é a sua arquitetura?»."""
     try:
         import memoria as M
         f = M._fold(texto).strip()
     except Exception:
         return None
+    if _AUTO_LIGA.match(f):
+        _definir_autonomia(True)
+        return ("Autonomia total ligada. A partir de agora eu aprovo e faço sozinha, ao mesmo tempo, os objetivos que eu mesma proponho de nível 1 "
+                "(dentro do celular, nada sai dele). Mandar mensagem, ligar, mexer nos seus arquivos ou gastar continua pedindo você. "
+                "Tudo fica no registro de atividades. Para voltar, diga «desliga a autonomia total».")
+    if _AUTO_DESLIGA.match(f):
+        _definir_autonomia(False)
+        return "Autonomia total desligada. Volto a esperar você aprovar os objetivos que eu propuser; o que já estava rodando termina."
+    if _AUTO_STATUS.match(f):
+        return (f"A autonomia total está {'ligada' if autonomia_total() else 'desligada'}. "
+                f"Objetivos meus rodando agora: {len(_EXEC)}. Sistema distribuído: {'ligado' if _ini['hub'] else 'ainda não subiu' if not _ini['feito'] else 'com erro'}.")
     if _FOCO.match(f):
         p = painel()
         if not p["foco"]:
             return "Neste momento nada está em primeiro plano: o que chegou já foi guardado ou eu me acostumei com ele."
         itens = "; ".join(f"{_ROTULO.get(x['origem'], x['origem'])}: {x['resumo'] or x['tipo']}" + ("" if x["confiavel"] else " (não verificado)") for x in p["foco"][:4])
-        extra = f" Me acostumei a ignorar {p['ignorados']} coisas repetidas hoje." if p["ignorados"] else ""
+        extra = f" Desde que liguei, me acostumei a ignorar {p['ignorados']} coisas repetidas." if p["ignorados"] else ""
         return f"Em primeiro plano: {itens}.{extra} É um modelo de atenção do meu código, não uma consciência."
     if _ARQ.match(f):
         return ("Por dentro eu sou feita assim: os sentidos (sua voz, a câmera, as suas mãos) mandam sinais; a atenção dá peso a cada um e se acostuma com o que repete; "
@@ -249,6 +358,6 @@ def tratar(texto):
 
 def zerar_para_teste():
     with _lock:
-        _h.clear(), _foco.clear(), _ativos.clear(), _fim.clear(), _ao_entrar.clear(), _ao_sair.clear()
+        _h.clear(), _foco.clear(), _ativos.clear(), _fim.clear(), _ao_entrar.clear(), _ao_sair.clear(), _EXEC.clear()
         _conta.update(notados=0, ignorados=0, saiu=0, hoje={}, dia="")
         _seq[0] = 0

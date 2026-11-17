@@ -508,6 +508,86 @@ class Voz(Base):
             self.assertIsNone(O.tratar(frase), frase)
 
 
+class AutonomiaTotal(Base):
+    """Pedido do dono: com a autonomia total ligada (só por voz, só por ele), o núcleo aprova sozinho os objetivos próprios de nível ≤ 1, em paralelo."""
+    def setUp(self):
+        super().setUp()
+        import nucleo as NC
+        self.NC = NC
+        NC._AUTO = None
+        self.addCleanup(lambda: (NC._definir_autonomia(False), NC.zerar_para_teste()))
+
+    def esperar(self, cond, s=5.0):
+        import time as _t
+        fim = _t.time() + s
+        while _t.time() < fim and not cond():
+            _t.sleep(0.02)
+        return cond()
+
+    def test_desligada_por_padrao_nada_e_aprovado_sozinho(self):
+        p = self.nova()
+        self.assertFalse(self.NC.autonomia_total())
+        with mock.patch.object(PL, "executar_objetivo", side_effect=AssertionError("só com a autonomia ligada")):
+            self.assertEqual(self.NC.ciclo_autonomo(), [])
+            self.assertEqual(O.aprovar_pela_autonomia(p["id"])[0], False)
+        self.assertEqual(O.obter(p["id"])["estado"], "proposto")
+
+    def test_so_a_frase_explicita_liga_e_desliga(self):
+        for vaga in ("sim", "pode", "faz aí", "liga a autonomia", "ativa tudo", "autonomia total"):
+            self.assertIsNone(self.NC.tratar(vaga), vaga)
+            self.assertFalse(self.NC.autonomia_total(), vaga)
+        self.assertIn("ligada", self.NC.tratar("liga a autonomia total"))
+        self.assertTrue(self.NC.autonomia_total())
+        self.assertIn("desligada", self.NC.tratar("Friday, desliga a autonomia total"))
+        self.assertFalse(self.NC.autonomia_total())
+
+    def test_ligada_aprova_e_executa_pelo_planejador_com_limite_1(self):
+        p = self.nova()
+        self.NC.tratar("liga a autonomia total")
+        with mock.patch.object(PL, "executar_objetivo", wraps=PL.executar_objetivo) as espia:
+            self.assertEqual(self.NC.ciclo_autonomo(), [p["id"]])
+            self.assertTrue(self.esperar(lambda: O.obter(p["id"])["estado"] not in ("proposto", "executando")))
+        kw = espia.call_args.kwargs
+        self.assertEqual((kw["autorizado_por"], kw["nivel_max"], kw["origem"]), ("autonomia_do_dono", 1, "propria"))
+        self.assertEqual(O.obter(p["id"])["decidida_por"], "autonomia_total")
+
+    def test_nao_aprova_proposta_acima_do_nivel_1_nem_com_acao_externa(self):
+        for i, mudar in enumerate(({"nivel_max": 2}, {"acao_externa": True})):
+            with self.subTest(mudar):
+                p = self.nova(chave=f"limite{i}")
+                with O._trava:
+                    O.ARQ.get()["propostas"][p["id"]]["limites"].update(mudar)
+                self.NC._definir_autonomia(True)
+                with mock.patch.object(PL, "executar_objetivo", side_effect=AssertionError("passou do limite")):
+                    ok, _ = O.aprovar_pela_autonomia(p["id"])
+                self.assertFalse(ok)
+                self.assertEqual(O.obter(p["id"])["estado"], "proposto")
+
+    def test_planejador_continua_recusando_objetivo_proprio_sem_autorizacao(self):
+        for quem in (None, "ia", "autonomia", "nucleo"):
+            r = PL.executar_objetivo("registrar_informacao", {"texto": "x", "titulo": "y"}, origem="propria", autorizado_por=quem, proposta="o01")
+            self.assertEqual(r["decisao"], "recusar", quem)
+
+    def test_varios_objetivos_rodam_ao_mesmo_tempo(self):
+        import threading
+        dentro, pico, trava, solta = [0], [0], threading.Lock(), threading.Event()
+        def lento(*a, **k):
+            with trava:
+                dentro[0] += 1; pico[0] = max(pico[0], dentro[0])
+            solta.wait(3)
+            with trava:
+                dentro[0] -= 1
+            return {"tarefa": None, "decisao": "concluir", "mensagem": "ok"}
+        ids = [self.nova(chave=f"k{i}")["id"] for i in range(3)]
+        self.NC._definir_autonomia(True)
+        with mock.patch.object(PL, "executar_objetivo", side_effect=lento):
+            self.assertEqual(sorted(self.NC.ciclo_autonomo()), sorted(ids))
+            self.assertTrue(self.esperar(lambda: pico[0] == 3))         # os três ao mesmo tempo, sem fila
+            self.assertEqual(self.NC.ciclo_autonomo(), [])              # o que já roda não é disparado de novo
+            solta.set()
+            self.assertTrue(self.esperar(lambda: all(O.obter(i)["estado"] == "concluido" for i in ids)))
+
+
 class SoPropoe(unittest.TestCase):
     """A IA continua só propondo: nenhuma ferramenta dela mexe em objetivos, e só a voz do dono aprova."""
 
@@ -516,14 +596,24 @@ class SoPropoe(unittest.TestCase):
             yield f.name, ast.parse(f.read_text(encoding="utf-8"))
 
     def test_so_a_main_importa_objetivos(self):
+        # nucleo.py: a autonomia total pedida pelo dono mora no núcleo; o que ele pode chamar está preso em test_nucleo_so_usa_a_aprovacao_da_autonomia
         for nome, arv in self.modulos():
-            if nome in ("objetivos.py", "main.py"):
+            if nome in ("objetivos.py", "main.py", "nucleo.py"):
                 continue
             for n in ast.walk(arv):
                 if isinstance(n, ast.Import):
                     self.assertNotIn("objetivos", [a.name for a in n.names], nome)
                 if isinstance(n, ast.ImportFrom):
                     self.assertNotEqual(n.module, "objetivos", nome)
+
+    def test_nucleo_so_usa_a_aprovacao_da_autonomia(self):
+        arv = ast.parse((RAIZ / "nucleo.py").read_text(encoding="utf-8"))
+        usos = set()
+        for fn in [n for n in ast.walk(arv) if isinstance(n, ast.FunctionDef)]:
+            for c in [n for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)]:
+                if isinstance(c.func.value, ast.Name) and c.func.value.id == "OBJ":
+                    usos.add((fn.name, c.func.attr))
+        self.assertEqual(usos, {("ciclo_autonomo", "listar"), ("ciclo_autonomo", "aprovar_pela_autonomia"), ("rodar", "aprovar_pela_autonomia")})   # rodar() fica dentro de ciclo_autonomo()
 
     def test_nenhuma_ferramenta_da_ia_toca_em_objetivos(self):
         for nome in B.FERRAMENTAS:

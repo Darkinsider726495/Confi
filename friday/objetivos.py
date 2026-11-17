@@ -4,6 +4,8 @@ Três coisas diferentes, de propósito:
   • propor    — `propor()` grava uma proposta, com justificativa e evidências. Não cria tarefa, não chama ferramenta, não muda nada fora do arquivo de propostas.
   • planejar  — `planejador.executar_objetivo()` monta o plano e escolhe a estratégia. Só roda para uma proposta que o dono aprovou.
   • autorizar — `aprovar()` (voz: «aprova o objetivo 2»). Respostas vagas («sim», «pode», «faz aí») nunca aprovam; a ação continua passando pelo corretor, que pede a confirmação dela como sempre.
+                Exceção pedida pelo dono: com a AUTONOMIA TOTAL ligada por ele, por voz (`nucleo.py`), `aprovar_pela_autonomia()` aprova sozinha as propostas de
+                nível ≤ 1 sem ação fora do aparelho. Desligada (o padrão), nada muda. Nível 2+ sempre volta para o dono (o corretor pede).
 
 O que uma proposta precisa para existir:
   • tipo que o catálogo do planejador permite para objetivos próprios (hoje só «registrar_informacao»: nível 1, reversível, sem sair do aparelho);
@@ -62,7 +64,7 @@ def _limpar_proposta(oid, x):
             "justificativa": _s(x.get("justificativa"), 400), "evidencias": evid, "vinculo": {"tarefa": vin["tarefa"], "origem": vin.get("origem") if vin.get("origem") in ("usuario", "meta", "ia") else "usuario"},
             "chave": _s(x.get("chave"), 160), "falhas_na_epoca": x["falhas_na_epoca"] if isinstance(x.get("falhas_na_epoca"), int) and not isinstance(x.get("falhas_na_epoca"), bool) and 0 <= x["falhas_na_epoca"] < 10**6 else 0,
             "limites": dict(LIMITES), "criada": x["criada"] if isinstance(x.get("criada"), (int, float)) else 0.0, "decidida": x["decidida"] if isinstance(x.get("decidida"), (int, float)) else None,
-            "decidida_por": "dono" if x.get("decidida_por") == "dono" else None,
+            "decidida_por": x.get("decidida_por") if x.get("decidida_por") in ("dono", "autonomia_total") else None,   # autonomia_total: modo que só o dono liga
             "resultado": {"tarefa": res["tarefa"] if isinstance(res.get("tarefa"), str) and _ID_T.fullmatch(res["tarefa"]) else None, "decisao": _s(res.get("decisao"), 40), "mensagem": _s(res.get("mensagem"), 300)} if res else None,
             "historico": hist}
 
@@ -215,18 +217,36 @@ _registrar_gancho()
 # ---------------------------------------------------------------- decidir (só o dono)
 def aprovar(oid, turno=None):
     """O DONO autoriza. Roda o planejador com os limites da proposta. Devolve (ok, mensagem)."""
+    return _executar_aprovada(oid, turno, por="dono", motivo="aprovado pelo dono", autorizado_por="dono")
+
+
+def aprovar_pela_autonomia(oid):
+    """Autonomia total (`nucleo.py`): o DONO ligou o modo por voz e, com isso, autorizou de antemão as propostas dela de nível ≤ 1,
+    sem ação fora do aparelho. Recusa se o modo estiver desligado ou se a proposta passar desses limites. O corretor continua valendo."""
+    import nucleo as NC
+    if not NC.autonomia_total():
+        return False, "a autonomia total está desligada; só o dono aprova"
+    with _trava:
+        p = ARQ.get()["propostas"].get(oid) if isinstance(oid, str) else None
+        lim = (p or {}).get("limites") or {}
+        if not p or lim.get("nivel_max", 99) > LIMITES["nivel_max"] or lim.get("acao_externa"):
+            return False, "fora do que a autonomia total pode aprovar (nível ≤ 1, nada fora do aparelho)"
+    return _executar_aprovada(oid, None, por="autonomia_total", motivo="aprovado pela autonomia total (ligada pelo dono)", autorizado_por="autonomia_do_dono")
+
+
+def _executar_aprovada(oid, turno, *, por, motivo, autorizado_por):
     with _trava:
         p = ARQ.get()["propostas"].get(oid) if isinstance(oid, str) else None
         if not p:
             return False, "não achei esse objetivo"
         if p["estado"] != "proposto":
             return False, f"esse objetivo está {p['estado']}" + (": retome antes" if p["estado"] == "pausado" else "")
-        _mudar(p, "executando", "aprovado pelo dono", por="dono")
+        _mudar(p, "executando", motivo, por=por)
         ARQ.salvar()
         _EM_EXECUCAO.add(oid)
         tipo, params, lim = p["tipo"], dict(p["params"]), dict(p["limites"])
     try:
-        r = PL.executar_objetivo(tipo, params, origem="propria", autorizado_por="dono", proposta=oid, nivel_max=lim["nivel_max"], max_tentativas=lim["max_tentativas"], turno=turno)
+        r = PL.executar_objetivo(tipo, params, origem="propria", autorizado_por=autorizado_por, proposta=oid, nivel_max=lim["nivel_max"], max_tentativas=lim["max_tentativas"], turno=turno)
     finally:
         _EM_EXECUCAO.discard(oid)
     with _trava:

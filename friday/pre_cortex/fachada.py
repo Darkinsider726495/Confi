@@ -1,6 +1,6 @@
 """Ponte entre o FRIDAY (main.py) e o pré-córtex distribuído.
 
-- `hub()` cria UM hub, só quando alguém precisa (primeira frase, primeira consulta do painel ou objetivo a recuperar na partida). O painel nunca cria o hub só para mostrar o resumo.
+- `hub()` cria UM hub. Na partida, o núcleo (`nucleo.iniciar()`) já o cria: o sistema distribuído fica sempre ligado dentro do núcleo. Fora da partida (testes), nasce no primeiro uso; o painel nunca o cria só para mostrar o resumo.
 - `tratar(texto)` reconhece frases EXPLÍCITAS (nunca «sim»/«pode»):
     «pré-córtex: <objetivo>»                       registra e inicia
     «pré-córtex planejar: <objetivo>»              só planeja (nada é executado)

@@ -57,3 +57,38 @@ class NucleoConcorrencia(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SistemaDistribuidoDentroDoNucleo(unittest.TestCase):
+    """Pedido do dono: o sistema distribuído nasce junto com o núcleo, sempre ligado; o ciclo autônomo gira, mas só age com a autonomia total ligada."""
+    def setUp(self):
+        self.antes = dict(NC._ini)
+        NC._ini.update(feito=False, hub=None, erro="")
+        self.addCleanup(lambda: NC._ini.update(self.antes))
+
+    def test_iniciar_sobe_o_hub_e_o_ciclo_uma_vez_so(self):
+        import pre_cortex.fachada as PC
+        with mock.patch.object(PC, "hub") as hub, mock.patch.object(NC.threading, "Thread") as linha:
+            r = NC.iniciar()
+            NC.iniciar()
+        hub.assert_called_once()
+        linha.assert_called_once()
+        self.assertEqual(linha.call_args.kwargs["target"], NC._laco_autonomo)
+        self.assertTrue(r["hub"])
+        self.assertTrue(NC.painel()["distribuido"]["hub"])
+
+    def test_erro_no_hub_nao_derruba_a_partida(self):
+        import pre_cortex.fachada as PC
+        with mock.patch.object(PC, "hub", side_effect=RuntimeError("sem pasta")), mock.patch.object(NC.threading, "Thread"):
+            r = NC.iniciar()
+        self.assertFalse(r["hub"])
+        self.assertIn("sem pasta", NC.painel()["distribuido"]["erro"])
+
+    def test_assinar_duas_vezes_nao_duplica(self):
+        NC.zerar_para_teste()
+        recebidos = []
+        f = recebidos.append
+        NC.assinar(ao_entrar=f); NC.assinar(ao_entrar=f)
+        NC.perceber("fala", "pedido", chave="x:1")
+        self.assertEqual(len(recebidos), 1)
+        NC.zerar_para_teste()

@@ -211,7 +211,7 @@ def executar_objetivo(tipo, params, *, origem="usuario", meta=None, conclui_meta
     if origem not in ORIGENS_PERMITIDAS:
         return _res("recusar", "Origem de objetivo inválida.", ciclo=["1 receber: origem inválida"])
     if origem == "propria":
-        if autorizado_por != "dono" or not isinstance(proposta, str):
+        if autorizado_por not in ("dono", "autonomia_do_dono") or not isinstance(proposta, str):   # autonomia_do_dono: modo que só o dono liga, por voz (nucleo.py)
             return _res("recusar", "Objetivo próprio só roda depois que o dono aprova a proposta.", ciclo=["1 receber: objetivo próprio sem autorização do dono"])
         if not obj["permite_proprio"]:
             return _res("recusar", f"Objetivos do tipo «{tipo}» não podem ser próprios.", ciclo=["1 receber: tipo não permitido para objetivo próprio"])

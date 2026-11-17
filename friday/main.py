@@ -530,6 +530,7 @@ def main():
     VIS.FALAR = lambda m: falar(m)  # "olhe": ela conta o que viu quando terminar
     VIS.AVISAR = lambda estado: ESTADO.update(estado=estado)  # o painel mostra «olhando» enquanto a câmera está em uso
     threading.Thread(target=VIS.laco, daemon=True).start()  # visão: olha em volta de vez em quando (fora do descanso e do silêncio)
+    NC.iniciar()  # núcleo: sobe o sistema distribuído (hub + nove neurônios) junto com ele e o ciclo da autonomia total (que só age se o dono ligar por voz)
     threading.Thread(target=PFC.laco, daemon=True).start()  # pré-córtex: junta os impulsos, decide (tudo ao mesmo tempo, se ela quiser), cuida das metas. Só lê; não trava nenhum laço
     threading.Thread(target=CUR.laco, daemon=True).start()  # curiosidade: estuda sozinha nas horas livres (quarentena em Estudos)
     threading.Thread(target=CONV.laco, args=(lambda m: falar(m, proativo=True),), daemon=True).start()  # puxa assunto, pergunta, conta o que estudou
