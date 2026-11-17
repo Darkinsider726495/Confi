@@ -12,6 +12,8 @@ Peças:
   5. AUTONOMIA TOTAL (pedida pelo dono). Só o dono liga/desliga, por voz («liga a autonomia total» / «desliga a autonomia total»; «sim»/«pode» nunca ligam).
      Ligada, o núcleo aprova SOZINHO os objetivos que ela mesma propõe, de nível ≤ 1 e sem ação fora do aparelho, e os executa em paralelo, sem esperar ordem.
      Nível 2+ (mensagem, ligação, arquivo do dono, dinheiro) continua pedindo o dono: o corretor não é contornado. Desligada (o padrão), tudo é como antes.
+     Os NEURÔNIOS TAMBÉM TRABALHAM SOZINHOS (`ciclo_neuronios`): o núcleo cria e aceita objetivos próprios no pré-córtex distribuído — diário do dia,
+     plano de estudo das metas dela que o catálogo conhece — e aceita sugestões que esperavam o dono. Crítica, autorização de risco e corretor seguem iguais.
 
 O que NÃO é: não tem ferramenta da IA, não executa ação do corretor por conta própria, não liga nem desliga a curiosidade, a conversa, a câmera ou a FRIDAY.
 Não é consciência nem biologia: é um modelo para organizar o código (docs/NUCLEO.md)."""
@@ -212,6 +214,8 @@ def esperando(agora=None):
 def _limpar_auto(lido, padrao):
     padrao["autonomia_total"] = lido.get("autonomia_total") is True
     padrao["mudou_em"] = lido.get("mudou_em") if isinstance(lido.get("mudou_em"), (int, float)) else None
+    sug = lido.get("sugeridos") if isinstance(lido.get("sugeridos"), dict) else {}
+    padrao["sugeridos"] = {str(k)[:80]: float(v) for k, v in list(sug.items())[-200:] if isinstance(v, (int, float))}
     return padrao
 
 
@@ -225,7 +229,7 @@ def _arq_auto():
     global _AUTO
     if _AUTO is None:
         import estado as ES
-        _AUTO = ES.Arq("nucleo_autonomia", {"autonomia_total": False, "mudou_em": None}, _limpar_auto)
+        _AUTO = ES.Arq("nucleo_autonomia", {"autonomia_total": False, "mudou_em": None, "sugeridos": {}}, _limpar_auto)
     return _AUTO
 
 
@@ -272,12 +276,71 @@ def ciclo_autonomo():
     return disparados
 
 
+ESTUDO_A_CADA_S = 24 * 3600            # um plano de estudo por assunto por dia, no máximo
+_MAX_ABERTOS_PROPRIOS = 3              # objetivos que os neurônios tocam por conta própria ao mesmo tempo
+
+
+def _trabalho_proprio(t):
+    """O que os neurônios podem fazer sozinhos, dentro do catálogo (que é código): (chave, texto do objetivo, intervalo mínimo em s).
+    Só rótulos e números: nunca o que o dono disse."""
+    import prefrontal as PFC
+    from pre_cortex import conhecimento as CONH
+    trabalho = []
+    a = PFC.atividades()
+    ativas = PFC.metas("ativa")
+    dia = time.strftime("%Y-%m-%d", time.localtime(t))
+    origens = ", ".join(f"{o}: {n}" for o, n in sorted(a["por_origem"].items(), key=lambda p: -p[1])) or "nenhuma"
+    trabalho.append((f"diario|{dia}", f"anote que no diário de {dia} registrei {a['hoje']} atividades ({origens}) e tenho {len(ativas)} metas ativas", 20 * 3600))
+    for m in ativas:
+        tema = _limpo(m.get("tema", ""), 60).lower()
+        for topico in CONH.topicos():
+            if m.get("tipo") == "aprender" and re.search(rf"\b{re.escape(topico)}\b", tema):
+                trabalho.append((f"estudo|{topico}", f"elabore um plano de estudos de {topico} para 4 semanas, no máximo 60 minutos por dia, e registre", ESTUDO_A_CADA_S))
+    return trabalho
+
+
+def ciclo_neuronios(agora=None):
+    """Com a autonomia total ligada, os neurônios trabalham sozinhos: o núcleo cria objetivos próprios no pré-córtex distribuído (origem «sugerido pelo
+    sistema») e os aceita, e aceita sugestões que estavam esperando o dono. O hub segue igual: crítica obrigatória, plano de risco espera o dono,
+    ação externa pede o dono, corretor no fim. Devolve os ids aceitos nesta volta."""
+    if not autonomia_total():
+        return []
+    import pre_cortex.fachada as PC
+    t = _agora() if agora is None else agora
+    hub = PC.hub()
+    aceitos = []
+    abertos = 0
+    for pcid in hub.arm.ids():
+        d = hub.arm.obter(pcid) or {}
+        if d.get("estado") == "aguardando_aceite":
+            if hub.aceitar(pcid, por="autonomia_total").get("ok"):
+                aceitos.append(pcid)
+        elif d.get("origem") == "aceito_para_execucao" and d.get("estado") not in ("concluido", "cancelado", "bloqueado", "plano_pronto"):
+            abertos += 1                      # rodando ou esperando o dono: conta, para não empilhar trabalho que ninguém olha
+    a = _arq_auto()
+    for chave, texto, intervalo in _trabalho_proprio(t):
+        if abertos >= _MAX_ABERTOS_PROPRIOS:
+            break
+        with a.trava:
+            ultima = a.get()["sugeridos"].get(chave)
+            if ultima is not None and t - ultima < intervalo:
+                continue
+            a.get()["sugeridos"][chave] = t
+            a.salvar()
+        r = hub.submeter(texto, origem="sugerido_pelo_sistema")
+        if r.get("ok") and hub.aceitar(r["id"], por="autonomia_total").get("ok"):
+            aceitos.append(r["id"])
+            abertos += 1
+    return aceitos
+
+
 def _laco_autonomo(intervalo=30.0):
     while True:
-        try:
-            ciclo_autonomo()
-        except Exception:
-            pass
+        for passo in (ciclo_autonomo, ciclo_neuronios):     # um erro num não impede o outro
+            try:
+                passo()
+            except Exception:
+                pass
         time.sleep(intervalo)
 
 

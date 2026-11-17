@@ -20,10 +20,22 @@ O núcleo está integrado ao `main.py` e **não é um escalonador**: nada nele �
 | Plano do pré-córtex distribuído que a crítica marca como de risco | espera «autorizo o plano…» | continua esperando |
 | Ação local de baixo impacto no pré-córtex distribuído | já roda sem esperar | igual |
 
+### Os neurônios trabalham sozinhos
+
+Com a autonomia total ligada, `nucleo.ciclo_neuronios()` (no mesmo laço, a cada 30 s) dá trabalho aos neurônios **sem ordem do dono**, sempre dentro do catálogo, que é código:
+
+| Trabalho | Quando | O que os neurônios fazem |
+|---|---|---|
+| Diário do dia | 1 por dia | anotam quantas atividades ela registrou, por origem, e quantas metas ativas tem (só números, nunca o que o dono disse) |
+| Plano de estudo | 1 por assunto por dia | se ela tem meta ativa de aprender um assunto que o catálogo conhece (hoje: Python, SQL), montam e guardam o plano |
+| Sugestões pendentes | toda volta | aceitam objetivos «sugeridos pelo sistema» que esperavam o aceite do dono |
+
+Os objetivos entram no hub com origem «sugerido pelo sistema» e são aceitos com `por="autonomia_total"` (fica assim no histórico de decisões, nunca como «dono»). No máximo 3 objetivos próprios abertos ao mesmo tempo. A crítica continua obrigatória, plano de risco continua esperando «autorizo o plano…» e ação externa (SMS, ligação) continua pedindo o dono — há teste para isso.
+
 - **Só o dono liga e desliga, por voz:** «liga a autonomia total» / «desliga a autonomia total»; «como está a autonomia total?». «sim», «pode», «liga a autonomia» (sem «total») não ligam. Fica gravado em `.cerebro/nucleo_autonomia.json`.
 - Caminho único: `nucleo.ciclo_autonomo()` → `objetivos.aprovar_pela_autonomia()` → `planejador.executar_objetivo(autorizado_por="autonomia_do_dono", nivel_max ≤ 1)` → corretor. A função recusa se o modo estiver desligado, se a proposta tiver `nivel_max > 1` ou `acao_externa`. O planejador recusa qualquer outro `autorizado_por`.
 - Tudo o que ela notar fica no registro de atividades do pré-córtex (`.cerebro/atividades.jsonl`); a proposta guarda `decidida_por: autonomia_total`.
-- Testes: `test_objetivos.AutonomiaTotal` (desligada não executa; só a frase explícita liga; limite de nível e de ação externa; planejador recusa outros; três objetivos rodando ao mesmo tempo) e `test_nucleo_concorrencia.SistemaDistribuidoDentroDoNucleo`.
+- Testes: `test_objetivos.NeuroniosSozinhos` (desligada não pega trabalho nem cria o hub; diário uma vez por dia; meta de estudo vira plano; sugestão pendente é aceita; ação externa continua esperando o dono), `test_objetivos.AutonomiaTotal` (desligada não executa; só a frase explícita liga; limite de nível e de ação externa; planejador recusa outros; três objetivos rodando ao mesmo tempo) e `test_nucleo_concorrencia.SistemaDistribuidoDentroDoNucleo`.
 
 ## Integração
 

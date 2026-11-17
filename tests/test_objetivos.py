@@ -4,7 +4,7 @@ Mapa dos testes da missão:  F (confirmação ambígua nunca autoriza: «sim», 
 D (reinício no meio da execução: a proposta se acerta com a tarefa, sem repetir o que foi feito) · I (coordenação: uma proposta aberta por assunto, no máximo 5 esperando, nada duplicado).
 Aqui: ela só PROPÕE (com justificativa e experiências como evidência), o dono AUTORIZA por frase explícita, o planejador PLANEJA e o corretor EXECUTA — e o dono pode pausar, retomar e cancelar.
 """
-import ast, json, os, re, unittest
+import ast, json, os, re, time, unittest
 from pathlib import Path
 from unittest import mock
 import _ambiente as E
@@ -586,6 +586,68 @@ class AutonomiaTotal(Base):
             self.assertEqual(self.NC.ciclo_autonomo(), [])              # o que já roda não é disparado de novo
             solta.set()
             self.assertTrue(self.esperar(lambda: all(O.obter(i)["estado"] == "concluido" for i in ids)))
+
+
+class NeuroniosSozinhos(Base):
+    """Pedido do dono: com a autonomia total ligada, os neurônios trabalham sem ordem (o núcleo cria e aceita objetivos próprios no hub)."""
+    def setUp(self):
+        super().setUp()
+        import nucleo as NC, pre_cortex.fachada as PC, prefrontal as PFC
+        self.NC, self.PC, self.PFC = NC, PC, PFC
+        NC._AUTO = None
+        PC.reiniciar()
+        self.addCleanup(lambda: (NC._definir_autonomia(False), PC.reiniciar()))
+
+    def esperar_fim(self, hub, ids, s=30.0):
+        import time as _t
+        fim = _t.time() + s
+        while _t.time() < fim and any(hub.arm.obter(i)["estado"] in ("recebido", "em_andamento", "aguardando_execucao") for i in ids):
+            _t.sleep(0.05)
+        return {i: hub.arm.obter(i)["estado"] for i in ids}
+
+    def test_desligada_os_neuronios_nao_pegam_trabalho_sozinhos(self):
+        self.assertEqual(self.NC.ciclo_neuronios(), [])
+        self.assertFalse(self.PC.criado())                     # nem cria o hub
+
+    def test_ligada_o_diario_do_dia_roda_sozinho_e_so_uma_vez(self):
+        self.NC._definir_autonomia(True)
+        ids = self.NC.ciclo_neuronios()
+        self.assertEqual(len(ids), 1)
+        hub = self.PC.hub()
+        self.assertEqual(self.esperar_fim(hub, ids), {ids[0]: "concluido"})
+        d = hub.arm.obter(ids[0])
+        self.assertIn("diário", d["descricao"])
+        self.assertIn("autonomia_total", [x["quem"] for x in d["historico_decisoes"]])   # registrado como autonomia, não como o dono
+        self.assertEqual(self.NC.ciclo_neuronios(), [])                         # mesmo dia: não repete
+        self.assertEqual(len(self.NC.ciclo_neuronios(agora=time.time() + 25 * 3600)), 1)   # no dia seguinte, um diário novo
+
+    def test_meta_de_estudo_conhecida_vira_plano_feito_pelos_neuronios(self):
+        self.PFC.nova_meta("aprender", "python")
+        self.NC._definir_autonomia(True)
+        ids = self.NC.ciclo_neuronios()
+        hub = self.PC.hub()
+        textos = {i: hub.arm.obter(i)["descricao"] for i in ids}
+        estudo = [i for i, t in textos.items() if "plano de estudos de python" in t]
+        self.assertEqual(len(estudo), 1, textos)
+        self.assertEqual(self.esperar_fim(hub, estudo)[estudo[0]], "concluido")
+
+    def test_aceita_sugestao_que_esperava_o_dono(self):
+        hub = self.PC.hub()
+        r = hub.submeter("anote que o teste de aceite passou", origem="sugerido_pelo_sistema")
+        self.assertEqual(hub.arm.obter(r["id"])["estado"], "aguardando_aceite")
+        self.assertEqual(self.NC.ciclo_neuronios(), [])                          # desligada: continua esperando
+        self.NC._definir_autonomia(True)
+        self.assertIn(r["id"], self.NC.ciclo_neuronios())
+        self.assertEqual(self.esperar_fim(hub, [r["id"]])[r["id"]], "concluido")
+
+    def test_acao_externa_continua_esperando_o_dono(self):
+        hub = self.PC.hub()
+        r = hub.submeter("mande um sms para 11999999999 dizendo oi", origem="sugerido_pelo_sistema")
+        self.NC._definir_autonomia(True)
+        self.NC.ciclo_neuronios()
+        estado = self.esperar_fim(hub, [r["id"]])[r["id"]]
+        self.assertNotEqual(estado, "concluido")
+        self.assertIn(estado, ("aguardando_autorizacao", "aguardando_confirmacao_do_corretor", "precisa_do_dono", "bloqueado"))
 
 
 class SoPropoe(unittest.TestCase):

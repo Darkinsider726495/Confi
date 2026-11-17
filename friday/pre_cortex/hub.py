@@ -419,7 +419,8 @@ class Hub(Fases):
         d = self.arm.obter(pcid) if isinstance(pcid, str) else None
         return d
 
-    def aceitar(self, pcid):
+    def aceitar(self, pcid, por="dono"):
+        """Aceita um objetivo sugerido pelo sistema. `por="autonomia_total"`: o núcleo aceitou porque o dono ligou a autonomia total (fica registrado assim)."""
         d = self._com_dossie(pcid)
         if d is None:
             return {"ok": False, "erro": "objetivo desconhecido"}
@@ -427,9 +428,10 @@ class Hub(Fases):
             return {"ok": False, "erro": f"este objetivo não está esperando aceite (estado: {d['estado']})"}
         with self.arm.trava:
             d["origem"], d["origem_aceita"], d["estado"] = "aceito_para_execucao", True, "em_andamento"
-            D.decisao(d, "dono", "aceitou o objetivo sugerido pelo sistema", "a partir daqui ele pode ser planejado", self.rel())
+            quem = "autonomia_total" if por == "autonomia_total" else "dono"
+            D.decisao(d, quem, "aceitou o objetivo sugerido pelo sistema" + (" (autonomia total, ligada pelo dono)" if quem != "dono" else ""), "a partir daqui ele pode ser planejado", self.rel())
         self._salvar()
-        self._evento(d, "objetivo_aceito", texto="o dono aceitou o objetivo sugerido pelo sistema")
+        self._evento(d, "objetivo_aceito", texto="o objetivo sugerido pelo sistema foi aceito" + (" pela autonomia total" if quem != "dono" else " pelo dono"))
         self._iniciar(pcid)
         return {"ok": True, "id": pcid}
 
