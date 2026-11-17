@@ -42,6 +42,13 @@ class Adaptador(unittest.TestCase):
         self.assertIn("STDIN olá; rm -rf / $(whoami)", log)
         self.assertNotIn("CMD termux-tts-speak -l pt -n BR olá", log)
 
+    def test_fala_pelo_canal_de_midia_para_tocar_com_o_celular_no_silencioso(self):
+        A.dizer("oi")
+        self.assertIn("-s MUSIC", E.ler_log(LOG))
+        with mock.patch.dict(os.environ, {"TTS_CANAL": "alarm; rm -rf /"}):
+            A.dizer("oi")
+        self.assertNotIn("-s ALARM; RM", E.ler_log(LOG))                     # canal fora da lista é ignorado
+
     def test_silencioso_vira_notificacao(self):
         A.dizer("bom dia", silencioso=True)
         log = E.ler_log(LOG)

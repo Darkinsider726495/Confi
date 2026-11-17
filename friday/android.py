@@ -85,6 +85,10 @@ def dizer(texto, silencioso=False):
                 a += [flag, f"{max(0.3, min(v, 3.0)):g}"]
             except ValueError:
                 pass
+        # canal de MÍDIA por padrão: o padrão do termux-tts-speak é o de notificação, que fica mudo com o celular no silencioso/vibrar
+        canal = os.getenv("TTS_CANAL", "MUSIC").strip().upper()
+        if canal in ("MUSIC", "NOTIFICATION", "ALARM", "RING", "SYSTEM", "VOICE_CALL"):
+            a += ["-s", canal]
         _run(a, entrada=texto, timeout=90)
 
 
