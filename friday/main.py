@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import assimilacao as ASS  # pré-córtex = registro; cada informação nova vira sinapse e o bruto vai embora (nunca vai para o disco)
 import tarefas as TAR
 import experiencias as XP
 import objetivos as OBJ
@@ -154,6 +155,10 @@ def processar(t):
         PFC.perceber("fala", "pedido")  # pré-córtex: só anota que você falou (nunca o texto)
     except Exception:
         pass
+    try:
+        ASS.registrar("fala", t)  # assimilação: só enfileira na RAM; os assuntos viram sinapses em segundo plano e a frase é descartada
+    except Exception:
+        pass
     with PEDIDO:
         tratado, resp = B.confirmar_voz(t)
         if tratado:
@@ -179,6 +184,8 @@ def processar(t):
             r = MAOS.tratar(t)  # "como uso as mãos?", "meus modelos 3d"
         if r is None:
             r = PFC.tratar(t)  # pré-córtex: "o que você decidiu?", "quais são as suas metas?", "tenha como meta aprender sobre...", "no que você está focada?" (responde pelo foco, com o que assimilou do núcleo)
+        if r is None:
+            r = ASS.tratar(t)  # «o que você percebeu?»: padrões que ela assimilou sozinha
         if r is None:
             r = NC.tratar(t)  # consultas de arquitetura (o foco já foi respondido pelo pré-córtex); camada observacional, sem bloqueio
         if r is None:
@@ -530,6 +537,7 @@ def main():
     VIS.FALAR = lambda m: falar(m)  # "olhe": ela conta o que viu quando terminar
     VIS.AVISAR = lambda estado: ESTADO.update(estado=estado)  # o painel mostra «olhando» enquanto a câmera está em uso
     threading.Thread(target=VIS.laco, daemon=True).start()  # visão: olha em volta de vez em quando (fora do descanso e do silêncio)
+    ASS.iniciar(lambda m: falar(m, proativo=True))  # assimilação em segundo plano; só comenta padrões se a conversa espontânea estiver ligada
     NC.iniciar()  # núcleo: sobe o sistema distribuído (hub + nove neurônios) junto com ele e o ciclo da autonomia total (que só age se o dono ligar por voz)
     threading.Thread(target=PFC.laco, daemon=True).start()  # pré-córtex: junta os impulsos, decide (tudo ao mesmo tempo, se ela quiser), cuida das metas. Só lê; não trava nenhum laço
     threading.Thread(target=CUR.laco, daemon=True).start()  # curiosidade: estuda sozinha nas horas livres (quarentena em Estudos)

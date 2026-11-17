@@ -191,6 +191,21 @@ def assimilar(sinal):
     return dict(reg)
 
 
+def anotar_assimilacao(origem, assuntos, t=None):
+    """O registro do pré-córtex recebe o que foi ASSIMILADO: só os assuntos (nunca a frase). Só acrescenta em `.cerebro/atividades.jsonl`."""
+    t = time.time() if t is None else float(t)
+    reg = {"t": round(t, 3), "origem": str(origem)[:20], "tipo": "assimilacao", "assuntos": [str(a)[:40] for a in list(assuntos)[:5]]}
+    if M.ativo():
+        try:
+            arq = M._dentro(M.base() / ".cerebro" / "atividades.jsonl")
+            arq.parent.mkdir(parents=True, exist_ok=True)
+            with open(arq, "a", encoding="utf-8") as f:
+                f.write(json.dumps(reg, ensure_ascii=False) + "\n")
+        except (OSError, ValueError):
+            pass
+    return reg
+
+
 def atividades():
     """Resumo do registro de hoje (o histórico completo fica em `.cerebro/atividades.jsonl`)."""
     with _trava:

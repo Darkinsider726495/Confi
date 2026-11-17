@@ -191,6 +191,14 @@ def disparar(achados):
         _salvar()
         for a, b in novas:
             _promover(a, b)
+            for f in list(AO_LIGAR):                     # quem quiser saber que uma ligação ficou forte (a assimilação percebe o padrão)
+                try:
+                    f(a, b)
+                except Exception:
+                    pass
+
+
+AO_LIGAR = []
 
 
 def _promover(a, b, rotulo="aprendida"):
