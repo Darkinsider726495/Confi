@@ -62,6 +62,18 @@ class GPT:
                       f"{l}.wfc": n(d, 4 * d), f"{l}.bfc": z(4 * d), f"{l}.wpr": n(4 * d, d, e=ep), f"{l}.bpr": z(d)})
         self.p = p
 
+    def expandir_vocab(self, novo_vocab, semente=7):
+        """O tokenizador contínuo criou tokens novos: acrescenta linhas no embedding (as antigas ficam iguais; o modelo continua sabendo tudo
+        o que sabia e aprende os novos no próximo treino)."""
+        atual = self.p["wte"].shape[0]
+        if novo_vocab <= atual:
+            return 0
+        r = np.random.default_rng(semente)
+        extra = (r.standard_normal((novo_vocab - atual, self.cfg["d"])) * 0.02).astype(self.p["wte"].dtype)
+        self.p["wte"] = np.concatenate([self.p["wte"], extra])
+        self.cfg["vocab"] = int(novo_vocab)
+        return novo_vocab - atual
+
     def n_parametros(self):
         return int(sum(v.size for v in self.p.values()))
 

@@ -16,6 +16,7 @@ python scripts/treinar_modelo.py --rapido      # teste: minutos
 python scripts/treinar_modelo.py               # padrão: ~1 M de parâmetros (no celular, deixe a noite toda; no PC, ~30 min)
 python scripts/treinar_modelo.py --grande      # ~6 M de parâmetros: PC ou Colab (horas)
 python scripts/treinar_modelo.py --conversar   # conversar com ele
+python scripts/bpe_continuo.py                 # BPE em loop contínuo: aprende tokens novos com o texto que chega (também roda no treino diário)
 echo 'IA_PROVEDOR=propria' >> .env && bash termux/atualizar.sh --reiniciar   # a FRIDAY passa a usar o modelo dela
 ```
 Treinar no PC e usar no celular: no PC `python scripts/api_modelo.py --rede`; no celular `.env` com `IA_PROVEDOR=propria`,

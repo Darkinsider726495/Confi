@@ -122,6 +122,11 @@ def treinar(agora=None, estudar=None):
         except Exception:
             pass
         try:
+            from modelo import continuo as BPE                 # BPE contínuo: tokens novos com o texto do dia (os antigos não mudam)
+            r["tokens_novos"] = len(BPE.rodada()["novos"])
+        except Exception:
+            pass
+        try:
             import relatorio as REL
             REL.registrar()
         except Exception:
@@ -167,6 +172,8 @@ def resumo_falado():
         partes.append(f"reajustei a rede de significado com {u['significado']} exemplos")
     if u.get("rotina"):
         partes.append(f"rotina: {u['rotina']}")
+    if u.get("tokens_novos"):
+        partes.append(f"aprendi {u['tokens_novos']} token(s) novo(s) no meu vocabulário")
     return ", ".join(partes) + "."
 
 

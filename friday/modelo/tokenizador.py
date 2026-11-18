@@ -40,6 +40,7 @@ class BPETokenizer:
                 seqs[w] = self._merge(seqs[w], melhor, novo)
             if relatorio and novo % 200 == 0:
                 relatorio(novo, self.vocab[novo])
+        self.contagem = palavras                                     # guarda a contagem: o aprendizado contínuo continua daqui
         self._cache.clear()
         return self
 
@@ -54,6 +55,42 @@ class BPETokenizer:
                 out.append(tokens[i])
                 i += 1
         return out
+
+    # ------------------------------------------------------------ aprendizado CONTÍNUO
+    def atualizar(self, texto_novo, crescer=64, minimo=3, relatorio=None):
+        """Continua aprendendo com texto novo, sem nunca mudar os tokens que já existem (os números ficam iguais: o modelo treinado continua
+        valendo). Soma as palavras novas à contagem guardada e faz até `crescer` fusões novas com os pares que aparecem pelo menos `minimo`
+        vezes. Devolve a lista de tokens novos (em texto)."""
+        cont = getattr(self, "contagem", Counter())
+        for m in PADRAO.finditer(texto_novo):
+            cont[m.group(0).encode("utf-8")] += 1
+        if len(cont) > 300_000:                                  # memória limitada: guarda só as palavras mais frequentes
+            cont = Counter(dict(cont.most_common(200_000)))
+        self.contagem = cont
+        seqs = {w: list(self._encode_palavra(w)) for w in cont}   # o que já sabe (mesmo resultado de aplicar as fusões na ordem)
+        novos = []
+        for _ in range(max(0, crescer)):
+            pares = Counter()
+            for w, n in cont.items():
+                s = seqs[w]
+                for p in zip(s, s[1:]):
+                    pares[p] += n
+            if not pares:
+                break
+            melhor = max(pares, key=pares.get)
+            if pares[melhor] < minimo:
+                break
+            nid = len(self.vocab)
+            self.merges[melhor] = nid
+            self.vocab[nid] = self.vocab[melhor[0]] + self.vocab[melhor[1]]
+            for w in seqs:
+                seqs[w] = self._merge(seqs[w], melhor, nid)
+            novos.append(self.vocab[nid].decode("utf-8", errors="replace"))
+            if relatorio:
+                relatorio(nid, novos[-1], pares[melhor])
+        self.vocab_size = max(self.vocab_size, len(self.vocab))
+        self._cache.clear()
+        return novos
 
     # ------------------------------------------------------------ uso
     def _encode_palavra(self, b):
@@ -80,8 +117,10 @@ class BPETokenizer:
 
     # ------------------------------------------------------------ disco
     def salvar(self, caminho):
+        cont = getattr(self, "contagem", None)
         with open(caminho, "w", encoding="utf-8") as f:
-            json.dump({"vocab_size": self.vocab_size, "merges": [[a, b, n] for (a, b), n in self.merges.items()]}, f)
+            json.dump({"vocab_size": self.vocab_size, "merges": [[a, b, n] for (a, b), n in self.merges.items()],
+                       "contagem": [[w.hex(), n] for w, n in cont.most_common(200_000)] if cont else []}, f)
 
     @classmethod
     def carregar(cls, caminho):
@@ -91,6 +130,8 @@ class BPETokenizer:
         for a, b, n in d["merges"]:
             t.merges[(a, b)] = n
             t.vocab[n] = t.vocab[a] + t.vocab[b]
+        if d.get("contagem"):
+            t.contagem = Counter({bytes.fromhex(w): n for w, n in d["contagem"]})
         return t
 
     def __len__(self):
