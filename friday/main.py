@@ -27,6 +27,7 @@ import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
 import sincronia as SINC  # cofre sincronizado com o PC direto pelo Wi-Fi (só o dono liga; só rede local; só com a chave)
+import constituicao as CONST  # Constitutional AI: revisa a própria resposta com princípios escritos
 import recompensa as RC  # aprendizado por recompensa: o feedback do dono ensina o ESTILO das respostas
 import rotina as ROT  # GRU (rede recorrente) que aprende a rotina do dono pelo registro de atividades e prevê a próxima hora
 import backup as BK  # cópia de segurança do cérebro: sozinha 1x/semana e por voz
@@ -204,6 +205,8 @@ def processar(t):
             r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
         if r is None:
             r = SINC.tratar(t)  # «liga/desliga a sincronização com o PC», «como está a sincronização?»
+        if r is None:
+            r = CONST.tratar(t)  # «quais são seus princípios?» (Constitutional AI)
         if r is None:
             r = RC.tratar(t)  # «boa resposta» / «resposta ruim» (recompensa), «o que você aprendeu com meu feedback?»
         if r is None:
