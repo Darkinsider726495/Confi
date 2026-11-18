@@ -5,6 +5,7 @@
     python scripts/treinar_modelo.py --rapido        teste rápido (minutos): modelo pequeno, poucos passos
     python scripts/treinar_modelo.py --grande        mais forte (use no PC ou no Colab: horas)
     python scripts/treinar_modelo.py --passos 5000 --camadas 6 --d 192
+    python scripts/treinar_modelo.py --hibrido 3     modelo HÍBRIDO: passa 3 vezes pelas mesmas camadas (pensa mais fundo, mesmos parâmetros)
     python scripts/treinar_modelo.py --conversar     conversa com o modelo treinado (Ctrl+C sai)
 """
 import argparse, sys
@@ -30,6 +31,7 @@ def main():
     ap.add_argument("--d", type=int)
     ap.add_argument("--vocab", type=int)
     ap.add_argument("--ctx", type=int)
+    ap.add_argument("--hibrido", type=int, metavar="R", help="modelo híbrido: passa R vezes pelas mesmas camadas (profundidade recorrente, BPTT)")
     a = ap.parse_args()
     if a.conversar:
         from modelo import api
@@ -58,6 +60,8 @@ def main():
     for k in ("passos", "camadas", "d", "vocab", "ctx"):
         if getattr(a, k):
             conf[k] = getattr(a, k)
+    if a.hibrido:
+        conf["repeticoes"] = a.hibrido
     T.treinar(**conf)
     print("\nPronto. Converse com ele:  python scripts/treinar_modelo.py --conversar")
     print("Para a FRIDAY usar o modelo dela no lugar da Groq:  echo 'IA_PROVEDOR=propria' >> .env  e  bash termux/atualizar.sh --reiniciar")

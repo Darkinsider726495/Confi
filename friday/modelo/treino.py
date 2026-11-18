@@ -53,7 +53,7 @@ def montar_corpus(incluir_cofre=True):
     return "\n\n".join(partes), origem
 
 
-def treinar(vocab=2048, ctx=128, d=128, cabecas=4, camadas=4, passos=2000, lote=16, lr=3e-4, relatorio=print, texto=None, semente=1337):
+def treinar(vocab=2048, ctx=128, d=128, cabecas=4, camadas=4, passos=2000, lote=16, lr=3e-4, relatorio=print, texto=None, semente=1337, repeticoes=1):
     """Treina do zero e salva. Devolve (modelo, tokenizador, histórico de perdas)."""
     t0 = time.time()
     if texto is None:
@@ -67,8 +67,9 @@ def treinar(vocab=2048, ctx=128, d=128, cabecas=4, camadas=4, passos=2000, lote=
     corte = int(len(dados) * 0.95)
     treino, val = dados[:corte], dados[corte:]
     ctx = min(ctx, max(8, len(val) - 2))
-    m = GPT(len(tok), ctx=ctx, d=d, cabecas=cabecas, camadas=camadas, semente=semente)
-    relatorio(f"Modelo: {m.n_parametros():,} parâmetros ({camadas} camadas, {cabecas} cabeças, d={d}, contexto {ctx})")
+    m = GPT(len(tok), ctx=ctx, d=d, cabecas=cabecas, camadas=camadas, semente=semente, repeticoes=repeticoes)
+    relatorio(f"Modelo: {m.n_parametros():,} parâmetros ({camadas} camadas, {cabecas} cabeças, d={d}, contexto {ctx})"
+              + (f" · HÍBRIDO: {repeticoes} passadas pelas mesmas camadas (BPTT na profundidade)" if repeticoes > 1 else ""))
     opt = AdamW(m.p, lr=lr)
     rng = np.random.default_rng(semente)
 

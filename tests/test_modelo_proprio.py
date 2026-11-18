@@ -47,6 +47,26 @@ class Gpt(unittest.TestCase):
             num = (a - b) / 2e-6
             self.assertAlmostEqual(g[k][i], num, delta=1e-5 + 1e-4 * abs(num), msg=k)
 
+    def test_hibrido_bptt_na_profundidade_gradiente_certo_e_mesmos_parametros(self):
+        normal = GPT(vocab=11, ctx=6, d=8, cabecas=2, camadas=2, dtype=np.float64, semente=3)
+        m = GPT(vocab=11, ctx=6, d=8, cabecas=2, camadas=2, dtype=np.float64, semente=3, repeticoes=3)
+        self.assertEqual(m.n_parametros(), normal.n_parametros())                 # pensa 3x mais fundo com os MESMOS pesos
+        rng = np.random.default_rng(0)
+        for k in m.p:
+            m.p[k] = m.p[k] + rng.normal(size=m.p[k].shape) * 0.1
+        idx, alvo = rng.integers(0, 11, (2, 5)), rng.integers(0, 11, (2, 5))
+        _, g = m.perda_e_gradientes(idx, alvo)
+        for k in m.p:
+            i = tuple(rng.integers(0, s) for s in m.p[k].shape)
+            v = m.p[k][i]
+            m.p[k][i] = v + 1e-5; a, _ = m.perda_e_gradientes(idx, alvo)
+            m.p[k][i] = v - 1e-5; b, _ = m.perda_e_gradientes(idx, alvo)
+            m.p[k][i] = v
+            self.assertAlmostEqual(g[k][i], (a - b) / 2e-5, delta=1e-7, msg=k)
+        arq = os.path.join(E.TMP, "hib.npz")
+        m.salvar(arq)
+        self.assertEqual(GPT.carregar(arq).cfg["repeticoes"], 3)
+
     def test_aprende_uma_sequencia(self):
         m = GPT(vocab=8, ctx=8, d=16, cabecas=2, camadas=1, semente=1)
         opt = AdamW(m.p, lr=1e-2)

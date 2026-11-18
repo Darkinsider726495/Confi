@@ -46,9 +46,13 @@ def _gelu_b(dy, cache):
 
 
 class GPT:
-    def __init__(self, vocab, ctx=128, d=128, cabecas=4, camadas=4, semente=1337, dtype=DT):
+    def __init__(self, vocab, ctx=128, d=128, cabecas=4, camadas=4, semente=1337, dtype=DT, repeticoes=1):
+        """`repeticoes` > 1 = modelo HÍBRIDO (profundidade recorrente): o texto passa R vezes pelas MESMAS camadas antes da resposta — pensa
+        «mais fundo» sem ganhar parâmetros. O treino vira retropropagação através das repetições (BPTT na profundidade): o gradiente de cada
+        passada se soma nos mesmos pesos."""
         assert d % cabecas == 0
-        self.cfg = {"vocab": int(vocab), "ctx": int(ctx), "d": int(d), "cabecas": int(cabecas), "camadas": int(camadas)}
+        self.cfg = {"vocab": int(vocab), "ctx": int(ctx), "d": int(d), "cabecas": int(cabecas), "camadas": int(camadas),
+                    "repeticoes": max(1, int(repeticoes))}
         self.dtype = dtype
         r = np.random.default_rng(semente)
         n = lambda *s, e=0.02: (r.standard_normal(s) * e).astype(dtype)
@@ -88,7 +92,8 @@ class GPT:
         x = p["wte"][idx] + p["wpe"][:T]
         mascara = np.triu(np.ones((T, T), bool), 1)
         caches = []
-        for l in range(c["camadas"]):
+        passadas = [l for _ in range(c.get("repeticoes", 1)) for l in range(c["camadas"])]   # híbrido: as mesmas camadas, R vezes
+        for l in passadas:
             a, cl1 = _ln_f(x, p[f"{l}.ln1_g"], p[f"{l}.ln1_b"])
             qkv = a @ p[f"{l}.wqkv"] + p[f"{l}.bqkv"]
             q, k, v = (qkv[..., i * D:(i + 1) * D].reshape(B, T, H, hd).transpose(0, 2, 1, 3) for i in range(3))
@@ -104,7 +109,7 @@ class GPT:
             g, cg = _gelu_f(h)
             x = x + (g @ p[f"{l}.wpr"] + p[f"{l}.bpr"])
             if guardar:
-                caches.append((a, cl1, q, k, v, att, y, m, cl2, g, cg))
+                caches.append((l, a, cl1, q, k, v, att, y, m, cl2, g, cg))
         xf, clf = _ln_f(x, p["lnf_g"], p["lnf_b"])
         logits = xf @ p["wte"].T
         return logits, (idx, caches, xf, clf)
@@ -130,8 +135,7 @@ class GPT:
         dx, g["lnf_g"], g["lnf_b"] = _ln_b(dlog @ p["wte"], clf)
         H, D = c["cabecas"], c["d"]
         hd = D // H
-        for l in reversed(range(c["camadas"])):
-            a, cl1, q, k, v, att, y, m, cl2, gg, cg = caches[l]
+        for l, a, cl1, q, k, v, att, y, m, cl2, gg, cg in reversed(caches):    # BPTT: volta passada por passada, somando nos mesmos pesos
             # MLP
             g[f"{l}.wpr"] += gg.reshape(n, -1).T @ dx.reshape(n, -1)
             g[f"{l}.bpr"] += dx.reshape(n, -1).sum(0)

@@ -27,3 +27,10 @@ Um modelo treinado do zero com pouco texto aprende o JEITO de escrever (palavras
 RACIOCINAR. Com ~1 M de parâmetros e alguns megabytes de texto, ele escreve português com cara de FRIDAY, mas erra fatos e perde o fio. Melhora
 com: mais texto (conversas, estudos, livros de domínio público em `modelos_ia/corpus/`), modelo maior (`--grande`) e mais passos — de preferência
 no PC/Colab. O modelo próprio não usa as ferramentas (não chama o corretor): ele só conversa.
+
+## Modelo híbrido (profundidade recorrente + BPTT)
+`python scripts/treinar_modelo.py --hibrido 3`: o texto passa 3 vezes pelas MESMAS camadas antes da resposta (a ideia de «recurrent depth»):
+pensa mais fundo com os mesmos parâmetros. O treino é retropropagação através das repetições (BPTT na profundidade: o gradiente de cada passada
+se soma nos mesmos pesos — conferido por diferença finita nos testes). Custa R vezes mais tempo por passo. Num teste curto (400 passos, modelo de
+2 camadas) ficou um pouco atrás do normal (perda 5,00 × 4,90): a vantagem aparece em treino mais longo e em tarefas de vários passos, não em
+modelo minúsculo. A FRIDAY também tem BPTT clássico (no tempo) na GRU da rotina (`friday/rotina.py`).
