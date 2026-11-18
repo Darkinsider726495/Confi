@@ -26,3 +26,14 @@ Ninguém no meio: o celular e o PC conversam direto na sua rede. Só o dono liga
 
 ## O que não dá para verificar aqui
 Rede de verdade entre o seu celular e o seu PC (roteador que isola aparelhos, firewall do Windows pedindo permissão).
+
+## MCP: o Claude do PC consulta a FRIDAY
+`scripts/friday_mcp.py` é um servidor MCP (stdio, só biblioteca padrão) que roda **no PC** e usa a mesma ponte (mesma chave, mesma regra: só com a sincronia ligada, só na rede local).
+
+- **Claude Code:** `claude mcp add friday -- python /caminho/friday_mcp.py --pasta "/caminho/Cofre FRIDAY"`
+- **Claude Desktop:** em `claude_desktop_config.json`:
+  `"mcpServers": {"friday": {"command": "python", "args": ["C:/caminho/friday_mcp.py", "--pasta", "C:/caminho/Cofre FRIDAY"]}}`
+
+Ferramentas, **todas só de leitura**: `friday_estado`, `friday_buscar_memoria`, `friday_ler_nota`, `friday_pedidos`.
+O Claude não manda nela, não executa nada no celular e não escreve no cofre. `Privado/` e notas privadas nunca saem.
+O que ele lê vai para o modelo do Claude (nuvem da Anthropic): é a sua memória saindo do aparelho, por escolha sua.

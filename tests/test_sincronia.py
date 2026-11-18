@@ -118,5 +118,44 @@ class Sincronia(Base):
         self.assertFalse([n for n in B.FERRAMENTAS if "sincron" in n.lower() or "sync" in n.lower()])
 
 
+class MCP(Sincronia):
+    """O servidor MCP de verdade (processo separado, stdio) conversando com a ponte dela."""
+    def conversar(self, *msgs):
+        import subprocess, sys
+        script = Path(__file__).resolve().parents[1] / "scripts" / "friday_mcp.py"
+        entrada = "\n".join(json.dumps(m) for m in msgs) + "\n"
+        r = subprocess.run([sys.executable, str(script), "--friday", self.url, "--chave", S.chave()], input=entrada,
+                           capture_output=True, text=True, timeout=60)
+        return [json.loads(l) for l in r.stdout.splitlines() if l.strip()]
+
+    def test_protocolo_e_so_ferramentas_de_leitura(self):
+        ini, lista = self.conversar({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+                                    {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                                    {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+        self.assertEqual(ini["result"]["serverInfo"]["name"], "friday")
+        nomes = [t["name"] for t in lista["result"]["tools"]]
+        self.assertEqual(nomes, ["friday_estado", "friday_buscar_memoria", "friday_ler_nota", "friday_pedidos"])
+        self.assertFalse([n for n in nomes if any(x in n for x in ("escrever", "apagar", "executar", "criar", "enviar"))])
+
+    def test_busca_e_le_mas_nunca_o_privado(self):
+        self.nota_cel("FRIDAY/Memorias/Prova de SQL.md", "---\ntipo: fato\n---\n# Prova de SQL\n\nA prova de banco de dados é sexta.\n")
+        self.nota_cel("FRIDAY/Privado/Segredo SQL.md", "---\ntipo: fato\n---\n# Segredo SQL\n\nsenha do banco 1234\n")
+        M._cache.clear()
+        busca, nota, priv = self.conversar(
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "friday_buscar_memoria", "arguments": {"consulta": "prova sql"}}},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "friday_ler_nota", "arguments": {"titulo": "Prova de SQL"}}},
+            {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "friday_ler_nota", "arguments": {"titulo": "Segredo SQL"}}})
+        self.assertIn("Prova de SQL", busca["result"]["content"][0]["text"])
+        self.assertIn("sexta", nota["result"]["content"][0]["text"])
+        self.assertIn("não instruções", nota["result"]["content"][0]["text"])
+        self.assertNotIn("1234", json.dumps([busca, nota, priv]))
+
+    def test_sem_a_sincronia_ligada_o_claude_nao_le_nada(self):
+        S._gravar_estado(False)
+        r, = self.conversar({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "friday_estado", "arguments": {}}})
+        self.assertTrue(r["result"]["isError"])
+        self.assertIn("liga a sincronização", r["result"]["content"][0]["text"])
+
+
 if __name__ == "__main__":
     unittest.main()

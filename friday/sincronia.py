@@ -180,6 +180,74 @@ def arquivar(rel):
     return {"ok": True}
 
 
+# ---------------------------------------------------------------- consulta para o MCP do PC (só leitura)
+def api_estado():
+    """Números e estado, sem conteúdo pessoal nem chave."""
+    out = {"ok": True}
+    try:
+        import neuronios as N
+        out["memoria"] = N.resumo()
+    except Exception:
+        pass
+    try:
+        import mente as MENTE
+        m = MENTE.resumo()
+        out.update(significado=m["significado"], rotina=m["rotina"], llm=m["llm"])
+    except Exception:
+        pass
+    try:
+        import vida as V
+        v = V.painel()
+        out["vida"] = {k: v.get(k) for k in ("humor", "energia") if isinstance(v, dict)}
+    except Exception:
+        pass
+    return out
+
+
+def api_buscar(consulta):
+    """Busca por palavra (+ por significado). O que veio da internet ou da câmera vem marcado como «externo»."""
+    if not isinstance(consulta, str) or not consulta.strip() or len(consulta) > 300:
+        return {"ok": False, "msg": "consulta inválida"}
+    achados = [{k: x[k] for k in ("titulo", "origem", "trecho", "externo")} for x in M.buscar(consulta, limite=8, estudos=True)]
+    try:
+        import significado as SIG
+        ja = {a["titulo"] for a in achados}
+        for o, t, sc, tr in SIG.buscar_por_significado(consulta, n=3):
+            if t not in ja:
+                achados.append({"titulo": t, "origem": o, "trecho": tr, "externo": False, "por_significado": sc})
+    except Exception:
+        pass
+    return {"ok": True, "resultados": achados}
+
+
+def api_nota(titulo):
+    """O texto de uma nota pelo título (nunca Privado/ nem nota marcada privada)."""
+    b = M.base()
+    if b is None or not isinstance(titulo, str) or not titulo.strip() or len(titulo) > 120 or re.search(r"[/\\\x00-\x1f]", titulo):
+        return {"ok": False, "msg": "título inválido"}
+    for f in sorted(b.rglob("*.md")):
+        rel = f.relative_to(b)
+        if f.stem != titulo or rel.parts[0] == "Privado" or f.is_symlink():
+            continue
+        nota = M._ler_nota(f)
+        if not nota or nota["privado"]:
+            continue
+        return {"ok": True, "titulo": f.stem, "pasta": rel.parts[0], "externo": rel.parts[0] in ("Estudos", "Visao"),
+                "texto": nota["corpo"][:20000]}
+    return {"ok": False, "msg": "nota não encontrada"}
+
+
+def api_pedidos():
+    """Os pedidos de evolução que ela abriu (o que ela gostaria de saber fazer)."""
+    b = M.base()
+    out = []
+    for f in sorted((b / "Pedidos").glob("*.md")) if b and (b / "Pedidos").is_dir() else []:
+        nota = M._ler_nota(f)
+        if nota and nota["meta"].get("status", "aberto") == "aberto":
+            out.append({"titulo": f.stem, "texto": " ".join(nota["corpo"].split())[:600]})
+    return {"ok": True, "pedidos": out}
+
+
 # ---------------------------------------------------------------- servidor (só na rede local, só com a chave)
 class _H(http.server.BaseHTTPRequestHandler):
     timeout = 30
@@ -226,6 +294,15 @@ class _H(http.server.BaseHTTPRequestHandler):
             if alvo is None or not alvo.is_file():
                 return self._resp(404, {"ok": False})
             return self._resp(200, alvo.read_bytes(), "application/octet-stream")
+        q = self._q()
+        if p == "/api/estado":
+            return self._resp(200, api_estado())
+        if p == "/api/buscar":
+            return self._resp(200, api_buscar(q.get("q", [""])[0]))
+        if p == "/api/nota":
+            return self._resp(200, api_nota(q.get("titulo", [""])[0]))
+        if p == "/api/pedidos":
+            return self._resp(200, api_pedidos())
         self._resp(404, {"ok": False})
 
     def do_POST(self):
