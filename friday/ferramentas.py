@@ -140,7 +140,8 @@ def ram_pct():
 
 
 def disco_pct():
-    d = shutil.disk_usage("/")
+    # a pasta da FRIDAY (no Android, o armazenamento do Termux): «/» lá é a partição do sistema, somente leitura, sempre «100% cheia»
+    d = shutil.disk_usage(os.path.expanduser("~") if os.path.isdir(os.path.expanduser("~")) else "/")
     return d.used * 100 // d.total
 
 

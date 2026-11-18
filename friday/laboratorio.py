@@ -133,8 +133,9 @@ def ler(rel):
     B._audit(ferramenta="lab_ler", decisao="executado", resultado=rel)
     return txt
 
-def listar():
-    """Lista arquivos do laboratório (relativo a LAB_ROOT, sem .versoes/.grave)."""
+def listar(auditar=True):
+    """Lista arquivos do laboratório (relativo a LAB_ROOT, sem .versoes/.grave). O painel lê sem auditar: ele pergunta a cada segundo,
+    e uma leitura dele não é uma ação dela (sem isso a trilha do corretor enchia de «lab_listar»)."""
     lab = _lab_absoluto()
     arqs = []
     for raiz, pastas, nomes in os.walk(lab):
@@ -143,7 +144,8 @@ def listar():
             rel = os.path.relpath(os.path.join(raiz, n), lab)
             if os.path.splitext(rel)[1].lower() in EXT_PERMITIDAS:
                 arqs.append(rel)
-    B._audit(ferramenta="lab_listar", decisao="executado")
+    if auditar:
+        B._audit(ferramenta="lab_listar", decisao="executado")
     return sorted(arqs)
 
 def editar(rel, novo_conteudo):
@@ -266,7 +268,7 @@ def testar(rel):
 def resumo():
     """Para o painel (HUD): o que está no laboratório e o que já foi modificado."""
     try:
-        n = len(listar())
+        n = len(listar(auditar=False))
     except Exception:
         n = 0
     return {"arquivos": n, "versoes": len(historico_versoes()), "raiz": LAB_ROOT,

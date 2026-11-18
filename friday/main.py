@@ -240,6 +240,16 @@ def _resumo_rag():
 _FALHAS_PAINEL = {}
 
 
+def _modo_ia():
+    """Antes da 1ª conversa o modo ainda é «—»: mostra o que está configurado («nuvem · groq»), sem chave nenhuma."""
+    v = T.MODO_IA["v"]
+    if v != "—":
+        return v
+    prov = (os.getenv("IA_PROVEDOR") or "anthropic").strip().lower()
+    tem = os.getenv("GROQ_API_KEY") if prov == "groq" else os.getenv("ANTHROPIC_API_KEY")
+    return f"nuvem · {prov}" if tem else "sem chave, só local"
+
+
 def _seguro(nome, fn):
     """Uma parte do painel que falha (um app do Termux que não respondeu, um módulo com erro) não pode apagar o painel inteiro."""
     try:
@@ -258,7 +268,7 @@ def estado_completo(painel=True):
         "lembretes": lambda: F.lembretes_lista()[:5], "pendente": B.pendente_publico, "auditoria": lambda: B.ultimos(8),
         "auditoria_ok": lambda: B.verificar_auditoria()[0], "android": lambda: ANDROID or A.ativo(),
         "metricas": lambda: T.PAINEL["metricas"], "clima": lambda: T.PAINEL["clima"], "leads": lambda: T.PAINEL["leads"], "protocolos": P.resumo,
-        "ia": lambda: T.MODO_IA["v"], "uptime": lambda: int(time.time() - T.INICIO), "foco": F.silencio_ativo, "tratamento": F.tratamento,
+        "ia": _modo_ia, "uptime": lambda: int(time.time() - T.INICIO), "foco": F.silencio_ativo, "tratamento": F.tratamento,
         "ferramentas": lambda: len(B.FERRAMENTAS), "voz": lambda: {"stt": VR.stt_ativo(), "tts": VR.tts_ativo()},
         "memoria": lambda: {**MEM.resumo(), **N.resumo()}, "ui": lambda: N.UI, "autonomia": AUT.resumo, "mae": MAE.resumo, "vida": V.painel,
         "curiosidade": CUR.resumo, "conversa": CONV.resumo, "visao": lambda: VIS.resumo(painel=painel), "maos": MAOS.resumo, "prefrontal": PFC.resumo,

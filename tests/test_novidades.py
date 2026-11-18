@@ -126,6 +126,22 @@ class PainelNaoApaga(Base):
         self.assertIsNotNone(e["uptime"])
 
 
+class PrintsDoDono(Base):
+    def test_painel_nao_enche_o_corretor_de_lab_listar(self):
+        import laboratorio as LAB, broker as BR
+        antes = len(BR.ultimos(50))
+        for _ in range(5):
+            LAB.resumo()
+        self.assertEqual(len(BR.ultimos(50)), antes)
+
+    def test_disco_e_o_da_pasta_dela_nao_o_do_sistema(self):
+        import ferramentas as F
+        with mock.patch("shutil.disk_usage") as du:
+            du.return_value = mock.Mock(used=1, total=4)
+            F.disco_pct()
+        self.assertEqual(du.call_args[0][0], os.path.expanduser("~"))
+
+
 class Painel(unittest.TestCase):
     def test_mente_no_painel_so_pelo_proprio_painel(self):
         main = (RAIZ / "friday" / "main.py").read_text(encoding="utf-8")
