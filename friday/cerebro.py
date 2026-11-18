@@ -87,7 +87,24 @@ def _nuvem_groq(msgs, turno, sistema=None):
         raise
 
 
+def _propria(msgs):
+    """O modelo PRÓPRIO dela (GPT em NumPy, treinado por você): no mesmo processo, ou pela API dele em outro aparelho (PROPRIA_URL)."""
+    url = (os.getenv("PROPRIA_URL") or "").strip().rstrip("/")
+    if url:
+        chave = (os.getenv("PROPRIA_CHAVE") or "").strip()
+        r = requests.post(url + "/v1/chat/completions", timeout=120, headers={"Authorization": f"Bearer {chave}"},
+                          json={"messages": [m for m in msgs if isinstance(m.get("content"), str)], "max_tokens": 120})
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip() or "…"
+    from modelo import api as MP
+    if not MP.disponivel():
+        raise RuntimeError("modelo próprio ainda não treinado")
+    return MP.responder([m for m in msgs if isinstance(m.get("content"), str)]) or "…"
+
+
 def _nuvem(msgs, turno, sistema=None):
+    if _provedor_nuvem() == "propria":
+        return _propria(msgs)          # sem ferramentas: o modelo próprio só conversa (o corretor continua igual para o resto)
     if _provedor_nuvem() == "groq":
         if not os.getenv("GROQ_API_KEY"):
             raise RuntimeError("GROQ_API_KEY ausente")
