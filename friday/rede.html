@@ -13,7 +13,7 @@ canvas{display:block;width:100vw;height:100vh}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="topo"><b>FRIDAY</b><span id="st">rede neural · carregando…</span>
-<button id="bTema" type="button">cores</button><button id="bAuto" type="button">câmera: auto</button><button id="bPainel" type="button">painel</button></div>
+<button id="bTema" type="button">cores</button><button id="bAuto" type="button">câmera: auto</button><nav id="nav4" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;;z-index:5;width:100%;pointer-events:auto;order:9"><a href="/" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Painel</a><a href="/mente" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Mente 3D</a><a href="/rede" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#55d6ff;color:#02101c;font-weight:bold">Rede neural</a><a href="/precortex" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Pré-córtex</a></nav></div>
 <div id="msg"></div>
 <div id="pe">Linhas entre camadas: caminhos do código (por onde a informação passa). Linhas entre as duas colunas de memória: <b>sinapses reais</b>, com a força delas. Brilho = atividade de verdade. Arraste para andar; toque num neurônio para ver as ligações.</div>
 <script>
@@ -23,7 +23,7 @@ let T='';try{const m=location.hash.match(/t=([\w-]+)/);if(m){T=m[1];try{localSto
 async function api(u){try{const r=await fetch(u,{headers:{'X-Friday-Token':T}});if(r.status===401){aviso('Chave inválida: abra pelo link da notificação.');return null}return await r.json()}catch(_){return null}}
 const $=id=>document.getElementById(id);
 function aviso(t){$('msg').textContent=t;$('msg').style.display=t?'block':'none'}
-$('bPainel').onclick=()=>{location.href='/'};
+
 // ------------------------------------------------------------------ cores (dois temas, como o painel)
 const TEMAS={azul:{a:[60,200,255],b:[150,90,255],c:[255,80,200],fundo:'#02060c'},ouro:{a:[255,170,60],b:[200,90,255],c:[255,90,170],fundo:'#05040a'}};
 let tema='azul';try{tema=localStorage.getItem('friday_rede_tema')||'azul'}catch(_){}

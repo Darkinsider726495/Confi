@@ -17,20 +17,20 @@ canvas{display:block;width:100vw;height:100vh}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="topo"><b>FRIDAY</b><span id="st">mente · carregando…</span><span id="estado">—</span>
-<button id="bGiro" type="button">giro: auto</button><button id="bPainel" type="button">painel</button></div>
+<button id="bGiro" type="button">giro: auto</button><nav id="nav4" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;;z-index:5;width:100%;pointer-events:auto;order:9"><a href="/" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Painel</a><a href="/mente" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#55d6ff;color:#02101c;font-weight:bold">Mente 3D</a><a href="/rede" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Rede neural</a><a href="/precortex" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Pré-córtex</a></nav></div>
 <div id="card"><button class="x" id="fechar" type="button">×</button><h4 id="ct"></h4><p id="cd"></p><small id="cr"></small></div>
 <div id="dica">Arraste para girar · pinça para aproximar · toque numa camada para ver o que ela é. Sinapses e números são reais.</div>
 <div id="msg"></div>
 <script>
 'use strict';
 const EMB=/[?&]embed=1/.test(location.search);   // dentro do painel: só a torre, sem barra; tocar abre a tela inteira
-if(EMB){document.documentElement.style.background='transparent';document.body.style.background='transparent';for(const id of ['topo','dica'])document.getElementById(id).style.display='none'}
+if(EMB){document.documentElement.style.background='transparent';document.body.style.background='transparent';for(const id of ['topo','dica','nav4'])document.getElementById(id).style.display='none'}
 // ------------------------------------------------------------------ chave (a mesma do painel); a tela só LÊ
 let T='';try{const m=location.hash.match(/t=([\w-]+)/);if(m){T=m[1];try{localStorage.setItem('friday_t',T)}catch(_){}history.replaceState(null,'',location.pathname)}else{try{T=localStorage.getItem('friday_t')||''}catch(_){}}}catch(_){}
 async function api(u){try{const r=await fetch(u,{headers:{'X-Friday-Token':T}});if(r.status===401){aviso('Chave inválida: abra pelo painel.');return null}return await r.json()}catch(_){return null}}
 const $=id=>document.getElementById(id);
 function aviso(t){$('msg').textContent=t;$('msg').style.display=t?'block':'none'}
-$('bPainel').onclick=()=>{location.href='/'};
+
 $('fechar').onclick=()=>{$('card').style.display='none';sel=null};
 // ------------------------------------------------------------------ as camadas REAIS, de baixo (entrada) para cima (saída)
 const COR={sent:[90,220,255],reg:[120,190,255],tr:[170,130,255],mem:[80,240,200],gru:[255,190,90],llm:[255,120,200],nuc:[120,255,160],cor:[255,110,110],sai:[230,240,255]};
