@@ -293,6 +293,38 @@ def limpar(texto):
     return r if len(frases) >= 2 and len(r) >= 60 else ""
 
 
+def limpar_detalhado(texto):
+    """Como `limpar`, mas para GUARDAR OS DETALHES: as mesmas barreiras frase a frase (ordens, dados sensíveis, links, contatos, marcas de papel),
+    só que sem resumir: todas as frases boas ficam, em parágrafos. '' se sobrar menos de duas frases."""
+    t = _MARCAS.sub(" ", str(texto or ""))
+    t = _URL.sub(" ", t)
+    t = _EMAIL.sub(" ", t)
+    t = _TEL.sub(" ", t)
+    t = re.sub(r"[\x00-\x1f\x7f​-‏‪-‮⁦-⁩*_#>`|~]+", " ", t)
+    t = " ".join(t.split())
+    frases = []
+    for s_ in re.split(r"(?<=[.!?])\s+", t):
+        s_ = s_.strip(" -–•")
+        if not (25 <= len(s_) <= 600) or _INJECAO.search(s_) or M.sensivel(s_):
+            continue
+        if sum(c.isalpha() for c in s_) < 0.6 * len(s_):
+            continue
+        if s_[-1] not in ".!?":
+            s_ += "."
+        frases.append(s_)
+    if len(frases) < 2:
+        return ""
+    return "\n\n".join(" ".join(frases[i:i + 5]) for i in range(0, len(frases), 5))
+
+
+def texto_por_pagina():
+    """Quanto texto ler de cada página. 0 = a página inteira (padrão: os detalhes são a chave). CURIOSIDADE_TEXTO_PAGINA põe teto."""
+    try:
+        return max(0, int(os.getenv("CURIOSIDADE_TEXTO_PAGINA", "0") or 0))
+    except ValueError:
+        return 0
+
+
 def _resumo_simples(texto):
     """Sem IA disponível: as primeiras frases do texto (passam por limpar do mesmo jeito)."""
     return " ".join(re.split(r"(?<=[.!?])\s+", " ".join(str(texto).split()))[:12])
@@ -317,7 +349,7 @@ def _ler_da_web(q):
         if teto and len(hosts) >= teto:
             break
         try:
-            host, txt = I.texto_pagina(r.get("u", ""), limite=2500)
+            host, txt = I.texto_pagina(r.get("u", ""), limite=texto_por_pagina() or 10 ** 7)
         except Exception:
             continue
         if host and host not in hosts and len(txt) > 200:
@@ -391,6 +423,15 @@ def estudar(tema=None, pedido=False, rng=random, meta=None):
             M.guardar_estudo(tema, limpo, hosts)
         except (ValueError, OSError, RuntimeError) as ex:
             return _falhou(e, str(ex), contar=False)
+        detalhes = 0
+        for host, parte in zip(hosts, partes):                  # profundidade: o texto inteiro de cada fonte, limpo, além do resumo
+            det = limpar_detalhado(parte)
+            if det:
+                try:
+                    M.guardar_detalhe_estudo(tema, host, det)
+                    detalhes += 1
+                except (ValueError, OSError, RuntimeError):
+                    pass
         e["falhas"], e["ult_tema"] = 0, tema
         d = e["temas"].setdefault(tema, {"p": 0.0, "n": 0, "u": ""})
         d.update(p=round(d["p"] * 0.5, 3), n=d["n"] + 1, u=f"{dt.date.today():%Y-%m-%d}")
@@ -410,7 +451,7 @@ def estudar(tema=None, pedido=False, rng=random, meta=None):
             B._audit(ferramenta="curiosidade", args=q[:200], nivel=0, decisao="estudo", resultado=f"{titulo} ({', '.join(hosts)})"[:300])
         except Exception:
             pass
-        return {"ok": True, "tema": tema, "titulo": titulo, "frase": frase_de(limpo), "hosts": hosts, "sinapses": sinapses}
+        return {"ok": True, "tema": tema, "titulo": titulo, "frase": frase_de(limpo), "hosts": hosts, "sinapses": sinapses, "detalhes": detalhes}
     finally:
         _estudando.release()
 
