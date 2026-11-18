@@ -156,7 +156,7 @@ class Cerebro(unittest.TestCase):
         r1 = {"stop_reason": "tool_use", "content": [{"type": "tool_use", "id": "t1", "name": "hora_data", "input": {}}]}
         r2 = {"stop_reason": "end_turn", "content": [{"type": "text", "text": "São três da tarde."}]}
         resp = [mock.Mock(json=mock.Mock(return_value=r), raise_for_status=mock.Mock()) for r in (r1, r2)]
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "x", "CONSTITUICAO": "0"}), mock.patch("requests.post", side_effect=resp) as p:
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "x"}), mock.patch("requests.post", side_effect=resp) as p:
             self.assertEqual(C.responder("que horas são?"), "São três da tarde.")
             self.assertEqual(p.call_count, 2)
         self.assertEqual(B.verificar_auditoria(), (True, 1))

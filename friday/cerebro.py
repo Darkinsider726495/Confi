@@ -338,12 +338,6 @@ def _responder(texto):
                 t2.contaminado = externo
                 r = _local(_hist(), texto, t2, sistema)
                 contaminado = contaminado or t2.contaminado
-    if modo in ("nuvem", "reserva local", "local", "sem chave, só local") and r:
-        try:
-            import constituicao as CONST
-            r = CONST.revisar(texto, r)            # Constitutional AI: critica o próprio rascunho e corrige antes de falar
-        except Exception:
-            pass
     T.MODO_IA["v"] = modo
     HIST.extend([{"role": "user", "content": texto}, {"role": "assistant", "content": r or "..."}])
     del HIST[:-20]
