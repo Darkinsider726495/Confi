@@ -92,6 +92,17 @@ def treinar(agora=None, estudar=None):
                     r["estudados"].append(t)
                 else:
                     r["falhas"] += 1
+            try:
+                import especialidade as ES             # a trilha de cibersegurança: os próximos temas, em ordem, todo dia
+                if ES.ativa():
+                    for t in ES.proximos(ES.por_dia()):
+                        x = estudar(t)
+                        if isinstance(x, dict) and x.get("ok"):
+                            r.setdefault("trilha", []).append(t)
+                        else:
+                            r["falhas"] += 1
+            except Exception:
+                pass
             velho = estudo_mais_antigo()
             if velho and velho not in r["estudados"]:
                 x = estudar(velho)
@@ -145,6 +156,8 @@ def resumo_falado():
         partes.append("não estudei porque a curiosidade está desligada")
     else:
         partes.append(f"aprofundei {len(u['estudados'])} assunto(s) do dia" + (f" ({', '.join(u['estudados'][:5])})" if u["estudados"] else ""))
+        if u.get("trilha"):
+            partes.append(f"avancei na trilha de cibersegurança com {len(u['trilha'])} tema(s) ({', '.join(u['trilha'])})")
         if u.get("revisado"):
             partes.append(f"revisei o estudo «{u['revisado']}»")
         if u.get("falhas"):

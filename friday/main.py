@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import especialidade as ESP  # especialidade: cibersegurança (trilha de estudo em ordem; conhecimento para proteger)
 import treinador as TREINO  # treinador diário: ela se estimula sozinha (aprofunda os assuntos do dia, revisa, reajusta as redes)
 import relatorio as REL  # relatório de evolução: números do dia + investigação do que deu errado
 import vigia as VIG  # modo vigia: protege e avisa (chave errada, Wi-Fi novo, app novo); nunca ataca
@@ -205,6 +206,8 @@ def processar(t):
             r = NOTI.tratar(t)  # «o que chegou?», «lê as do WhatsApp» (local, sem IA)
         if r is None:
             r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
+        if r is None:
+            r = ESP.tratar(t)  # «qual é a sua especialidade?», «o que você sabe de cibersegurança?»
         if r is None:
             r = TREINO.tratar(t)  # «treine agora», «como foi o seu treino?», liga/desliga o treino diário
         if r is None:

@@ -260,6 +260,14 @@ def candidatos():
         t = t.lower()
         if t not in c and e["temas"].get(t, {}).get("n", 0) == 0:
             c[t] = 0.3
+    try:
+        import especialidade as ES                 # a especialidade dela (cibersegurança): a trilha pesa mais, na ordem
+        for t, p in ES.candidatos():
+            t = t.lower()
+            if _tema_valido(t):
+                c[t] = max(c.get(t, 0.0), p)
+    except Exception:
+        pass
     return [(t, p) for t, p in c.items() if p > 0]
 
 
