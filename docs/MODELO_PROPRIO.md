@@ -34,3 +34,30 @@ pensa mais fundo com os mesmos parâmetros. O treino é retropropagação atrav�
 se soma nos mesmos pesos — conferido por diferença finita nos testes). Custa R vezes mais tempo por passo. Num teste curto (400 passos, modelo de
 2 camadas) ficou um pouco atrás do normal (perda 5,00 × 4,90): a vantagem aparece em treino mais longo e em tarefas de vários passos, não em
 modelo minúsculo. A FRIDAY também tem BPTT clássico (no tempo) na GRU da rotina (`friday/rotina.py`).
+
+## Escalar: PC e celular (medido)
+Velocidade medida num processador de 4 núcleos (NumPy usa todos):
+
+| Tamanho | Parâmetros | Segundos por passo | Treino padrão | Tempo estimado aqui |
+|---|---|---|---|---|
+| `--rapido` | 0,2 M | 0,04 s | 300 passos | ~15 s |
+| padrão | 1,1 M | 0,56 s | 2.000 passos | ~20 min |
+| `--grande` | 5,9 M | 7,8 s | 20.000 passos | ~43 h |
+
+Num PC com mais núcleos fica proporcionalmente mais rápido; no celular, conte de 3 a 5 vezes mais lento. Por isso:
+- **o treino salva sozinho a cada 200 passos** e `--continuar` retoma de onde parou (Ctrl+C também salva) — dá para treinar em várias noites;
+- **geração com cache KV**: responde ~11× mais rápido (mesma resposta, conferido em teste).
+
+### Roteiro no PC (Windows, Linux ou Kali; só Python 3 + `pip install numpy`)
+```bash
+python scripts/baixar_corpus.py --livros 100      # 1. dados: livros em português
+python scripts/treinar_modelo.py                   # 2. pré-treino (aprende português)
+python scripts/treinar_modelo.py --continuar       #    (se parou no meio)
+python scripts/treinar_modelo.py --ajuste          # 3. ajuste fino: aprende a CONVERSAR (conversas + perguntas e respostas dos estudos)
+python scripts/chaves_api.py criar celular         # 4. a chave do celular (aparece uma vez)
+python scripts/api_modelo.py --rede                # 5. a API própria na rede de casa
+```
+No celular (`.env`): `IA_PROVEDOR=propria`, `PROPRIA_URL=http://IP-DO-PC:8100`, `PROPRIA_CHAVE=fri_…`.
+
+### Chaves da API própria
+`scripts/chaves_api.py criar|listar|revogar NOME`: uma chave por aparelho, com nome; no disco fica só o hash (sha256); revogar uma não mexe nas outras.

@@ -93,7 +93,8 @@ class _H(http.server.BaseHTTPRequestHandler):
         except ValueError:
             return False
         dada = self.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-        if not hmac.compare_digest(dada.encode(), token().encode()):
+        from . import chaves
+        if not (chaves.valida(dada) or hmac.compare_digest(dada.encode(), token().encode())):   # chave com nome (chaves_api.py) ou a chave mestra
             self._resp(401, {"error": "chave inválida"})
             return False
         return True

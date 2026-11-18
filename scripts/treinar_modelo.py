@@ -5,6 +5,8 @@
     python scripts/treinar_modelo.py --rapido        teste rápido (minutos): modelo pequeno, poucos passos
     python scripts/treinar_modelo.py --grande        mais forte (use no PC ou no Colab: horas)
     python scripts/treinar_modelo.py --passos 5000 --camadas 6 --d 192
+    python scripts/treinar_modelo.py --continuar     retoma de onde parou (o treino salva sozinho a cada 200 passos; Ctrl+C salva e para)
+    python scripts/treinar_modelo.py --ajuste        ajuste fino: depois do pré-treino, ensina a CONVERSAR como assistente
     python scripts/treinar_modelo.py --hibrido 3     modelo HÍBRIDO: passa 3 vezes pelas mesmas camadas (pensa mais fundo, mesmos parâmetros)
     python scripts/treinar_modelo.py --conversar     conversa com o modelo treinado (Ctrl+C sai)
 """
@@ -31,6 +33,8 @@ def main():
     ap.add_argument("--d", type=int)
     ap.add_argument("--vocab", type=int)
     ap.add_argument("--ctx", type=int)
+    ap.add_argument("--continuar", action="store_true", help="retoma do último ponto salvo (modelo + otimizador + passo)")
+    ap.add_argument("--ajuste", action="store_true", help="ajuste fino: ensina a CONVERSAR (conversas + perguntas e respostas dos estudos)")
     ap.add_argument("--hibrido", type=int, metavar="R", help="modelo híbrido: passa R vezes pelas mesmas camadas (profundidade recorrente, BPTT)")
     a = ap.parse_args()
     if a.conversar:
@@ -62,10 +66,19 @@ def main():
             conf[k] = getattr(a, k)
     if a.hibrido:
         conf["repeticoes"] = a.hibrido
-    T.treinar(**conf)
+    if a.continuar:
+        conf["continuar"] = True
+    if a.ajuste:
+        conf.update(ajuste=True, passos=a.passos or 600)
+    try:
+        T.treinar(**conf)
+    except KeyboardInterrupt:
+        print("\nParado. Para continuar de onde parou:  python scripts/treinar_modelo.py --continuar")
+        return 0
     print("\nPronto. Converse com ele:  python scripts/treinar_modelo.py --conversar")
     print("Para a FRIDAY usar o modelo dela no lugar da Groq:  echo 'IA_PROVEDOR=propria' >> .env  e  bash termux/atualizar.sh --reiniciar")
     return 0
+
 
 
 if __name__ == "__main__":

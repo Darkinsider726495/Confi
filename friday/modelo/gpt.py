@@ -167,14 +167,53 @@ class GPT:
         return perda, g
 
     # ------------------------------------------------------------ geração
-    def gerar(self, ids, n=100, temperatura=0.8, top_k=40, parar=None, rng=None):
-        """Continua a sequência `ids` por até `n` tokens. `parar(ids_novos)` → True interrompe (ex.: chegou «\\nDono:»)."""
+    def _frente_kv(self, idx, cache):
+        """Para frente só com os tokens NOVOS, reaproveitando as chaves/valores já calculados (cache KV). `cache` = {"pos", "kv": [(K, V)…]}."""
+        c, p = self.cfg, self.p
+        T = len(idx)
+        pos = cache["pos"]
+        H, D = c["cabecas"], c["d"]
+        hd = D // H
+        x = p["wte"][np.asarray(idx)][None] + p["wpe"][pos:pos + T][None]
+        passadas = [l for _ in range(c.get("repeticoes", 1)) for l in range(c["camadas"])]
+        if not cache["kv"]:
+            cache["kv"] = [None] * len(passadas)
+        total = pos + T
+        mascara = np.arange(total)[None, :] > (pos + np.arange(T))[:, None]       # cada token novo só vê o passado
+        for i, l in enumerate(passadas):
+            a, _ = _ln_f(x, p[f"{l}.ln1_g"], p[f"{l}.ln1_b"])
+            qkv = a @ p[f"{l}.wqkv"] + p[f"{l}.bqkv"]
+            q, k, v = (qkv[..., j * D:(j + 1) * D].reshape(1, T, H, hd).transpose(0, 2, 1, 3) for j in range(3))
+            if cache["kv"][i] is not None:
+                K0, V0 = cache["kv"][i]
+                k, v = np.concatenate([K0, k], 2), np.concatenate([V0, v], 2)
+            cache["kv"][i] = (k, v)
+            sc = np.where(mascara, -1e9, (q @ k.transpose(0, 1, 3, 2)) / math.sqrt(hd))
+            sc = sc - sc.max(-1, keepdims=True)
+            att = np.exp(sc)
+            att /= att.sum(-1, keepdims=True)
+            y = (att @ v).transpose(0, 2, 1, 3).reshape(1, T, D)
+            x = x + (y @ p[f"{l}.wo"] + p[f"{l}.bo"])
+            m, _ = _ln_f(x, p[f"{l}.ln2_g"], p[f"{l}.ln2_b"])
+            g, _ = _gelu_f(m @ p[f"{l}.wfc"] + p[f"{l}.bfc"])
+            x = x + (g @ p[f"{l}.wpr"] + p[f"{l}.bpr"])
+        cache["pos"] = total
+        xf, _ = _ln_f(x[:, -1], p["lnf_g"], p["lnf_b"])
+        return xf[0] @ p["wte"].T
+
+    def gerar(self, ids, n=100, temperatura=0.8, top_k=40, parar=None, rng=None, kv=True):
+        """Continua a sequência `ids` por até `n` tokens. `parar(ids_novos)` → True interrompe (ex.: chegou «\\nDono:»).
+        Com `kv` (padrão), usa o cache de chaves/valores: cada token novo custa só ele, não o texto inteiro de novo."""
         rng = rng or np.random.default_rng()
-        ids = list(ids)
+        ctx = self.cfg["ctx"]
+        ids = list(ids)[-ctx:] or [0]
         novos = []
+        cache = {"pos": 0, "kv": []}
+        z = self._frente_kv(ids, cache) if kv else None
         for _ in range(n):
-            ctx = np.array([ids[-self.cfg["ctx"]:]])
-            z = self.logits(ctx)[0, -1].astype(np.float64)
+            if not kv:
+                z = self.logits(np.array([ids[-ctx:]]))[0, -1]
+            z = z.astype(np.float64)
             if temperatura <= 0:
                 prox = int(z.argmax())
             else:
@@ -189,6 +228,12 @@ class GPT:
             novos.append(prox)
             if parar and parar(novos):
                 break
+            if kv:
+                if cache["pos"] >= ctx:                      # passou do contexto: recomeça o cache com a janela mais recente
+                    cache = {"pos": 0, "kv": []}
+                    z = self._frente_kv(ids[-ctx:], cache)
+                else:
+                    z = self._frente_kv([prox], cache)
         return novos
 
     # ------------------------------------------------------------ disco
