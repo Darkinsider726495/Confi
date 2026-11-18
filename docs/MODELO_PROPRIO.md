@@ -11,6 +11,7 @@ Tudo escrito do zero, em Python + NumPy, dentro do projeto:
 
 ## Usar
 ```bash
+python scripts/baixar_corpus.py --livros 100  # livros em português do Projeto Gutenberg (mais texto = modelo melhor)
 python scripts/treinar_modelo.py --rapido      # teste: minutos
 python scripts/treinar_modelo.py               # padrão: ~1 M de parâmetros (no celular, deixe a noite toda; no PC, ~30 min)
 python scripts/treinar_modelo.py --grande      # ~6 M de parâmetros: PC ou Colab (horas)
