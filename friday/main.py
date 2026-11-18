@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import recompensa as RC  # aprendizado por recompensa: o feedback do dono ensina o ESTILO das respostas
 import rotina as ROT  # GRU (rede recorrente) que aprende a rotina do dono pelo registro de atividades e prevê a próxima hora
 import backup as BK  # cópia de segurança do cérebro: sozinha 1x/semana e por voz
 import notificacoes as NOTI  # «o que chegou?»: resumo local das notificações (nada vai para a nuvem)
@@ -200,6 +201,8 @@ def processar(t):
             r = NOTI.tratar(t)  # «o que chegou?», «lê as do WhatsApp» (local, sem IA)
         if r is None:
             r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
+        if r is None:
+            r = RC.tratar(t)  # «boa resposta» / «resposta ruim» (recompensa), «o que você aprendeu com meu feedback?»
         if r is None:
             r = ROT.tratar(t)  # «como é a minha rotina?», «o que você acha que eu vou fazer agora?» (GRU; só prevê, não executa)
         if r is None:

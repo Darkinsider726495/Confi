@@ -311,6 +311,11 @@ def _responder(texto):
     msgs = _hist() + [{"role": "user", "content": texto}]
     bloco, externo = _memoria_completa(texto)
     sistema = _system() + bloco
+    try:
+        import recompensa as RC
+        sistema += RC.instrucao(texto)        # só ESTILO, aprendido com «boa resposta» / «resposta ruim» do dono
+    except Exception:
+        pass
     turno = B.Turno()
     turno.contaminado = externo  # o bloco traz algo estudado na internet: este pedido nasce 'contaminado'
     contaminado = externo
