@@ -43,11 +43,11 @@ class Treinador(Base):
         self.assertEqual(len(r["estudados"]), 1)
 
     def test_uma_vez_por_dia_depois_da_hora(self):
-        cedo = dt.datetime.now().replace(hour=8, minute=0).timestamp()
+        cedo = dt.datetime.now().replace(hour=2, minute=0).timestamp()
         tarde = dt.datetime.now().replace(hour=15, minute=0).timestamp()
         with mock.patch.object(TR, "treinar") as t, mock.patch("threading.Thread") as th:
             TR.gancho(cedo)
-            self.assertFalse(th.called)                                 # antes das 14:00, não
+            self.assertFalse(th.called)                                 # antes das 03:00, não
             TR.gancho(tarde); TR.gancho(tarde + 60)
             self.assertEqual(th.call_count, 1)                           # depois, uma vez só no dia
 
@@ -57,6 +57,21 @@ class Treinador(Base):
         self.assertIn("ligado", TR.tratar("liga o treino diário"))
         self.assertIn("Ainda não treinei", TR.tratar("como foi o seu treino?"))
         self.assertFalse([n for n in B.FERRAMENTAS if "trein" in n.lower()])
+
+
+class CotaDoFundo(unittest.TestCase):
+    def test_fundo_espera_a_vez_e_da_passagem_ao_dono(self):
+        import cerebro as C
+        dormiu = []
+        with mock.patch.dict(os.environ, {"FUNDO_INTERVALO_S": "20", "FUNDO_DONO_S": "120"}):
+            C._FUNDO.update(ult=time.time(), dono=0.0)
+            C._esperar_vez_do_fundo(dormir=lambda s: (dormiu.append(s), C._FUNDO.update(ult=0.0)))
+            self.assertTrue(dormiu)                                      # chamada logo depois de outra: espera
+            dormiu.clear()
+            C._FUNDO.update(ult=0.0, dono=time.time())
+            C._esperar_vez_do_fundo(dormir=lambda s: (dormiu.append(s), C._FUNDO.update(dono=0.0)))
+            self.assertTrue(dormiu)                                      # você acabou de falar: o fundo espera
+        C._FUNDO.update(ult=0.0, dono=0.0)
 
 
 if __name__ == "__main__":

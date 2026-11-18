@@ -2,6 +2,8 @@
 import os, sys, stat, tempfile
 
 TMP = tempfile.mkdtemp(prefix="friday-teste-")
+os.environ.setdefault("FUNDO_INTERVALO_S", "0")   # testes não esperam a vez do trabalho de fundo
+os.environ.setdefault("FUNDO_DONO_S", "0")
 os.environ.update(
     FRIDAY_DB=os.path.join(TMP, "t.db"), FRIDAY_AUDITORIA=os.path.join(TMP, "aud.jsonl"), FRIDAY_PIN="4321",
     RELES="luz:17:1,portao:27:3,tomada:22:2", FRIDAY_PLATAFORMA="android", FRIDAY_DOCS=os.path.join(TMP, "docs"),

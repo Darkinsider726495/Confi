@@ -1,5 +1,5 @@
 """Cérebro: IA na nuvem com ferramentas (via corretor); sem internet ou acima do limite diário, usa modelo local (Ollama)."""
-import os, re, json, time, requests
+import os, re, json, time, threading, requests
 import broker as B
 import ferramentas as F
 import catalogo  # noqa: F401  (registra as ferramentas no corretor)
@@ -209,6 +209,28 @@ def _memoria(texto):
     return _memoria_completa(texto)[0]
 
 
+_FUNDO = {"ult": 0.0, "dono": 0.0}
+_trava_fundo = threading.Lock()
+
+
+def _esperar_vez_do_fundo(dormir=time.sleep):
+    """Trabalho de fundo (estudos dela, fracao < 1) espera a vez: no máximo uma chamada a cada FUNDO_INTERVALO_S (padrão 20 s, ~3 por minuto,
+    abaixo do limite por minuto da Groq grátis) e nunca nos 2 minutos depois de você falar com ela — a cota fica para a sua conversa."""
+    try:
+        intervalo = max(0.0, float(os.getenv("FUNDO_INTERVALO_S", "20")))
+        passagem = max(0.0, float(os.getenv("FUNDO_DONO_S", "120")))
+    except ValueError:
+        intervalo, passagem = 20.0, 120.0
+    with _trava_fundo:
+        for _ in range(60):                                   # no máximo ~10 min esperando; depois segue (o 429 ainda protege)
+            agora = time.time()
+            falta = max(_FUNDO["ult"] + intervalo - agora, _FUNDO["dono"] + passagem - agora)
+            if falta <= 0:
+                break
+            dormir(min(falta, 10))
+        _FUNDO["ult"] = time.time()
+
+
 def resumir(instrucao, texto, max_tokens=350, fracao=1.0, sistema=None):
     """Uma chamada de IA SEM ferramentas, para resumir texto de terceiros: o texto é só dado e a IA não tem como agir.
     Respeita IA_MODO e o limite diário (`fracao` < 1 deixa o resto do dia para você: estudos por iniciativa dela usam só parte do limite).
@@ -223,6 +245,8 @@ def resumir(instrucao, texto, max_tokens=350, fracao=1.0, sistema=None):
             import provedor_groq as _G
             if float(fracao) < 1 and _G.limitada():
                 return None                     # a Groq está no limite: estudo dela espera (resumo simples); a cota que volta é da sua conversa
+            if float(fracao) < 1:
+                _esperar_vez_do_fundo()
             if F.contar_llm(int(int(os.getenv("LIMITE_DIARIO", "200")) * max(0.0, min(1.0, float(fracao))))):
                 from provedor_groq import responder as responder_groq
                 resposta = responder_groq([{"role": "user", "content": msg}], sistema=sistema, max_tokens=max_tokens)
@@ -310,6 +334,7 @@ def responder(texto):
 
 
 def _responder(texto):
+    _FUNDO["dono"] = time.time()                 # você falou: o trabalho de fundo dá passagem por 2 minutos
     cfg = _modo()
     msgs = _hist() + [{"role": "user", "content": texto}]
     bloco, externo = _memoria_completa(texto)

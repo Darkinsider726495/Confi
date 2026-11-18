@@ -1,6 +1,6 @@
 """Treinador diário: todo dia ela se ESTIMULA sozinha, como o Claude faria se estivesse no celular.
 
-Roteiro (uma vez por dia, a partir de TREINO_HORA, padrão 14:00; ou na hora com «treine agora»):
+Roteiro (uma vez por dia, a partir de TREINO_HORA, padrão 03:00 — de madrugada, sem disputar a cota com você; ou na hora com «treine agora»):
   1. aprofunda os assuntos NOVOS do dia (os neurônios de Topicos/ criados ou mexidos hoje): estuda cada um na internet, com profundidade;
   2. revisa o estudo mais antigo (relê as fontes: a informação pode ter mudado);
   3. reajusta a rede de significado com as sinapses e as suas correções;
@@ -39,8 +39,9 @@ def ligado():
 
 
 def _hora():
-    h = os.getenv("TREINO_HORA", "14:00")
-    return h if re.fullmatch(r"\d{2}:\d{2}", h) else "14:00"
+    """Padrão 03:00: ela treina de madrugada, quando você não está usando (a cota da Groq fica livre para o seu dia)."""
+    h = os.getenv("TREINO_HORA", "03:00")
+    return h if re.fullmatch(r"\d{2}:\d{2}", h) else "03:00"
 
 
 def _teto():
