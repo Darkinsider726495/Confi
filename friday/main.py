@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import sincronia as SINC  # cofre sincronizado com o PC direto pelo Wi-Fi (só o dono liga; só rede local; só com a chave)
 import recompensa as RC  # aprendizado por recompensa: o feedback do dono ensina o ESTILO das respostas
 import rotina as ROT  # GRU (rede recorrente) que aprende a rotina do dono pelo registro de atividades e prevê a próxima hora
 import backup as BK  # cópia de segurança do cérebro: sozinha 1x/semana e por voz
@@ -201,6 +202,8 @@ def processar(t):
             r = NOTI.tratar(t)  # «o que chegou?», «lê as do WhatsApp» (local, sem IA)
         if r is None:
             r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
+        if r is None:
+            r = SINC.tratar(t)  # «liga/desliga a sincronização com o PC», «como está a sincronização?»
         if r is None:
             r = RC.tratar(t)  # «boa resposta» / «resposta ruim» (recompensa), «o que você aprendeu com meu feedback?»
         if r is None:
@@ -600,6 +603,8 @@ def main():
             _notificacao_painel(porta, link)
         except Exception as e:
             print("sem notificação:", e, flush=True)
+    if SINC.ligada():
+        SINC.iniciar()  # o dono deixou a sincronia com o PC ligada: o servidor dela volta junto
     F.GANCHOS.append(BK.gancho)  # backup semanal do cérebro, sozinha
     if ANDROID:
         threading.Thread(target=ESC.laco, args=(processar, falar, lambda: ESTADO.get("estado")), daemon=True).start()  # escuta contínua (se o dono ligou)
