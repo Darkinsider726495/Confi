@@ -45,6 +45,33 @@ def prompt_de(mensagens):
     return "\n".join(linhas) + "\nFRIDAY:"
 
 
+def responder_fluxo(mensagens, max_tokens=0, temperatura=0.7, parar_no_dono=True):
+    """Gerador de TEXTO, pedaço por pedaço, enquanto o modelo escreve. max_tokens=0 = sem limite (para no próximo «Dono:» ou quando
+    quem lê parar de ler). UTF-8 decodificado aos poucos: acento nunca sai quebrado."""
+    import codecs
+    modelo, tok = carregar()
+    ids = tok.encode(prompt_de(mensagens))[-(modelo.cfg["ctx"] - 8):]
+    dec = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    pendente, n = "", 0
+    for t in modelo.fluxo(ids, temperatura=temperatura, top_k=40):
+        n += 1
+        pendente += dec.decode(tok.vocab.get(t, b""))
+        if parar_no_dono and "\nDono:" in pendente:
+            antes = pendente.split("\nDono:")[0]
+            if antes:
+                yield antes
+            return
+        if "\n" in pendente[-6:] or len(pendente) > 24:
+            corte = len(pendente) - 6 if parar_no_dono else len(pendente)   # segura o finalzinho: pode ser o começo de «Dono:»
+            if corte > 0:
+                yield pendente[:corte]
+                pendente = pendente[corte:]
+        if max_tokens and n >= max_tokens:
+            break
+    if pendente:
+        yield pendente
+
+
 def responder(mensagens, max_tokens=120, temperatura=0.7):
     modelo, tok = carregar()
     ids = tok.encode(prompt_de(mensagens))[-(modelo.cfg["ctx"] - 8):]
@@ -120,8 +147,23 @@ class _H(http.server.BaseHTTPRequestHandler):
             return self._resp(400, {"error": "pedido inválido"})
         if not disponivel():
             return self._resp(503, {"error": "modelo ainda não treinado (python scripts/treinar_modelo.py)"})
-        mx = max(1, min(int(d.get("max_tokens") or 120), 400))
-        texto = responder(msgs, max_tokens=mx, temperatura=float(d.get("temperature", 0.7)))
+        mx = max(0, int(d.get("max_tokens") or 0))                   # 0 / ausente = sem limite (no modo fluxo)
+        temp = float(d.get("temperature", 0.7))
+        if d.get("stream"):                                            # fluxo: o texto vai chegando enquanto ela escreve (SSE)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            try:
+                for pedaco in responder_fluxo(msgs, max_tokens=mx, temperatura=temp):
+                    ev = {"object": "chat.completion.chunk", "model": "friday-gpt", "choices": [{"index": 0, "delta": {"content": pedaco}}]}
+                    self.wfile.write(b"data: " + json.dumps(ev, ensure_ascii=False).encode() + b"\n\n")
+                    self.wfile.flush()
+                self.wfile.write(b"data: [DONE]\n\n")
+            except (BrokenPipeError, ConnectionResetError):
+                pass                                                   # quem pediu desligou: ela para de escrever
+            return
+        texto = responder(msgs, max_tokens=max(1, min(mx or 120, 2000)), temperatura=temp)
         self._resp(200, {"id": f"friday-{int(time.time() * 1000)}", "object": "chat.completion", "model": "friday-gpt",
                          "choices": [{"index": 0, "message": {"role": "assistant", "content": texto}, "finish_reason": "stop"}]})
 

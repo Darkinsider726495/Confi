@@ -201,39 +201,47 @@ class GPT:
         xf, _ = _ln_f(x[:, -1], p["lnf_g"], p["lnf_b"])
         return xf[0] @ p["wte"].T
 
-    def gerar(self, ids, n=100, temperatura=0.8, top_k=40, parar=None, rng=None, kv=True):
-        """Continua a sequência `ids` por até `n` tokens. `parar(ids_novos)` → True interrompe (ex.: chegou «\\nDono:»).
-        Com `kv` (padrão), usa o cache de chaves/valores: cada token novo custa só ele, não o texto inteiro de novo."""
+    def _escolher(self, z, temperatura, top_k, rng):
+        z = z.astype(np.float64)
+        if temperatura <= 0:
+            return int(z.argmax())
+        z = z / temperatura
+        if top_k and top_k < z.size:
+            corte = np.partition(z, -top_k)[-top_k]
+            z = np.where(z < corte, -np.inf, z)
+        pz = np.exp(z - z.max())
+        pz /= pz.sum()
+        return int(rng.choice(z.size, p=pz))
+
+    def fluxo(self, ids, temperatura=0.8, top_k=40, rng=None, kv=True):
+        """Gerador SEM FIM: devolve um token novo de cada vez, para sempre (quem usa decide quando parar). Quando passa do contexto, continua
+        com uma janela deslizante (recomeça o cache com os tokens mais recentes) — não há limite de tamanho."""
         rng = rng or np.random.default_rng()
         ctx = self.cfg["ctx"]
         ids = list(ids)[-ctx:] or [0]
-        novos = []
         cache = {"pos": 0, "kv": []}
-        z = self._frente_kv(ids, cache) if kv else None
-        for _ in range(n):
+        z = self._frente_kv(ids, cache) if kv else self.logits(np.array([ids[-ctx:]]))[0, -1]
+        while True:
+            prox = self._escolher(z, temperatura, top_k, rng)
+            ids.append(prox)
+            if len(ids) > 4 * ctx:
+                ids = ids[-ctx:]                                # a memória não cresce: só a janela recente importa
+            yield prox
             if not kv:
                 z = self.logits(np.array([ids[-ctx:]]))[0, -1]
-            z = z.astype(np.float64)
-            if temperatura <= 0:
-                prox = int(z.argmax())
+            elif cache["pos"] >= ctx:
+                cache = {"pos": 0, "kv": []}
+                z = self._frente_kv(ids[-(ctx // 2):], cache)   # janela deslizante: metade do contexto, e segue
             else:
-                z = z / temperatura
-                if top_k and top_k < z.size:
-                    corte = np.partition(z, -top_k)[-top_k]
-                    z = np.where(z < corte, -np.inf, z)
-                pz = np.exp(z - z.max())
-                pz /= pz.sum()
-                prox = int(rng.choice(z.size, p=pz))
-            ids.append(prox)
-            novos.append(prox)
-            if parar and parar(novos):
+                z = self._frente_kv([prox], cache)
+
+    def gerar(self, ids, n=100, temperatura=0.8, top_k=40, parar=None, rng=None, kv=True):
+        """Até `n` tokens (n=None ou 0 = sem limite: até `parar` dizer chega). `parar(ids_novos)` → True interrompe."""
+        novos = []
+        for t in self.fluxo(ids, temperatura, top_k, rng, kv):
+            novos.append(t)
+            if (n and len(novos) >= n) or (parar and parar(novos)):
                 break
-            if kv:
-                if cache["pos"] >= ctx:                      # passou do contexto: recomeça o cache com a janela mais recente
-                    cache = {"pos": 0, "kv": []}
-                    z = self._frente_kv(ids[-ctx:], cache)
-                else:
-                    z = self._frente_kv([prox], cache)
         return novos
 
     # ------------------------------------------------------------ disco

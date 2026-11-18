@@ -369,8 +369,8 @@ def _responder(texto):
         contaminado = turno.contaminado
     else:
         try:
-            if not F.contar_llm(int(os.getenv("LIMITE_DIARIO", "200"))):
-                raise RuntimeError("limite diário")
+            if _provedor_nuvem() != "propria" and not F.contar_llm(int(os.getenv("LIMITE_DIARIO", "200"))):
+                raise RuntimeError("limite diário")                    # o modelo próprio roda no aparelho: sem cota, sem limite de uso
             modo, r = "nuvem", _nuvem(msgs, turno, sistema)
             contaminado = turno.contaminado
         except Exception:

@@ -8,7 +8,8 @@
     python scripts/treinar_modelo.py --continuar     retoma de onde parou (o treino salva sozinho a cada 200 passos; Ctrl+C salva e para)
     python scripts/treinar_modelo.py --ajuste        ajuste fino: depois do pré-treino, ensina a CONVERSAR como assistente
     python scripts/treinar_modelo.py --hibrido 3     modelo HÍBRIDO: passa 3 vezes pelas mesmas camadas (pensa mais fundo, mesmos parâmetros)
-    python scripts/treinar_modelo.py --conversar     conversa com o modelo treinado (Ctrl+C sai)
+    python scripts/treinar_modelo.py --conversar     conversa com o modelo treinado, o texto aparece ao vivo (Ctrl+C sai)
+    python scripts/treinar_modelo.py --infinito "texto"   escreve SEM PARAR a partir do texto, sem limite (Ctrl+C para)
 """
 import argparse, sys
 from pathlib import Path
@@ -28,6 +29,7 @@ def main():
     ap.add_argument("--rapido", action="store_true")
     ap.add_argument("--grande", action="store_true")
     ap.add_argument("--conversar", action="store_true")
+    ap.add_argument("--infinito", nargs="?", const="A FRIDAY", metavar="TEXTO", help="escreve SEM PARAR a partir do texto (Ctrl+C para)")
     ap.add_argument("--passos", type=int)
     ap.add_argument("--camadas", type=int)
     ap.add_argument("--d", type=int)
@@ -37,22 +39,44 @@ def main():
     ap.add_argument("--ajuste", action="store_true", help="ajuste fino: ensina a CONVERSAR (conversas + perguntas e respostas dos estudos)")
     ap.add_argument("--hibrido", type=int, metavar="R", help="modelo híbrido: passa R vezes pelas mesmas camadas (profundidade recorrente, BPTT)")
     a = ap.parse_args()
-    if a.conversar:
+    if a.conversar or a.infinito:
         from modelo import api
         if not api.disponivel():
             print("Ainda não há modelo treinado: rode primeiro  python scripts/treinar_modelo.py --rapido")
             return 1
+        if a.infinito:
+            import numpy as np, codecs
+            modelo, tok = api.carregar()
+            dec = codecs.getincrementaldecoder("utf-8")(errors="replace")
+            print(f"Modelo próprio escrevendo SEM LIMITE a partir de «{a.infinito}» (Ctrl+C para):\n")
+            print(a.infinito, end="", flush=True)
+            n = 0
+            try:
+                for t in modelo.fluxo(tok.encode(a.infinito), temperatura=0.8, top_k=40):
+                    print(dec.decode(tok.vocab.get(t, b"")), end="", flush=True)
+                    n += 1
+            except KeyboardInterrupt:
+                print(f"\n\n[parado por você depois de {n:,} tokens]")
+            return 0
         hist = []
-        print("Conversando com o modelo PRÓPRIO dela (Ctrl+C sai).")
+        print("Conversando com o modelo PRÓPRIO dela, sem limite de uso (Ctrl+C sai).")
         try:
             while True:
                 t = input("você › ").strip()
                 if not t:
                     continue
                 hist.append({"role": "user", "content": t})
-                r = api.responder(hist)
-                hist.append({"role": "assistant", "content": r})
-                print("friday-gpt ›", r or "(…)")
+                print("friday-gpt › ", end="", flush=True)
+                partes = []
+                try:
+                    for pedaco in api.responder_fluxo(hist):           # o texto vai aparecendo enquanto ela escreve
+                        partes.append(pedaco)
+                        print(pedaco, end="", flush=True)
+                except KeyboardInterrupt:
+                    print(" [interrompido]", end="")
+                print()
+                hist.append({"role": "assistant", "content": "".join(partes).strip()})
+                del hist[:-12]
         except (EOFError, KeyboardInterrupt):
             print()
             return 0

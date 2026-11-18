@@ -61,3 +61,11 @@ No celular (`.env`): `IA_PROVEDOR=propria`, `PROPRIA_URL=http://IP-DO-PC:8100`, 
 
 ### Chaves da API própria
 `scripts/chaves_api.py criar|listar|revogar NOME`: uma chave por aparelho, com nome; no disco fica só o hash (sha256); revogar uma não mexe nas outras.
+
+## Geração sem limite
+O modelo próprio roda no aparelho: **sem cota de uso** (não conta no `LIMITE_DIARIO` da Groq) e **sem limite de tamanho**:
+- `modelo.fluxo(ids)` é um gerador que nunca acaba sozinho — passou do contexto, continua com uma janela deslizante (a memória não cresce);
+- `python scripts/treinar_modelo.py --infinito "texto"` escreve sem parar até Ctrl+C (medido: ~900 tokens/s com o modelo padrão);
+- `--conversar` mostra a resposta ao vivo, pedaço por pedaço;
+- API: `"stream": true` manda o texto em fluxo (SSE, formato `chat.completion.chunk`); `max_tokens` 0/ausente = sem limite (para no próximo
+  «Dono:» ou quando quem pediu desconecta).
