@@ -88,6 +88,15 @@ def main():
     if not token():
         print("Não achei a chave do painel (friday/.token). A FRIDAY já foi ligada alguma vez neste aparelho?")
         return 1
+    import time
+    for i in range(20):                                      # acabou de reiniciar? ela leva uns 20–30 s para subir: espera, não desiste
+        try:
+            urllib.request.urlopen(URL + "/saude", timeout=3).read()
+            break
+        except (urllib.error.URLError, OSError):
+            if i == 0:
+                print("Esperando a FRIDAY subir (até 1 minuto)…", flush=True)
+            time.sleep(3)
     try:
         estado()
     except urllib.error.HTTPError as e:
