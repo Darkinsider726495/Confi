@@ -1,3 +1,4 @@
+import unittest
 import json
 import os
 import sys
@@ -136,3 +137,26 @@ def test_se_a_groq_recusar_as_opcoes_tenta_de_novo_sem_elas(monkeypatch):
     assert session.post.call_count == 2
     assert "reasoning_format" in session.post.call_args_list[0].kwargs["json"]
     assert "reasoning_format" not in session.post.call_args_list[1].kwargs["json"]
+
+
+class LimiteDaGroq(unittest.TestCase):
+    def test_429_anota_o_limite_estudo_espera_e_a_conversa_explica(self):
+        import provedor_groq as G, cerebro as C
+        from unittest import mock as _m
+        resp = _m.Mock(status_code=429, headers={"retry-after": "120"})
+        resp.raise_for_status.side_effect = G.requests.HTTPError(response=resp)
+        sess = _m.Mock(post=_m.Mock(return_value=resp))
+        G.LIMITE["ate"] = 0.0
+        self.addCleanup(lambda: G.LIMITE.update(ate=0.0))
+        with _m.patch.dict(os.environ, {"GROQ_API_KEY": "gsk_teste"}):
+            with self.assertRaises(G.GroqError):
+                G.chat_completion([{"role": "user", "content": "oi"}], session=sess)
+        self.assertGreater(G.limitada(), 100)
+        with _m.patch.dict(os.environ, {"IA_PROVEDOR": "groq", "GROQ_API_KEY": "gsk_teste"}), _m.patch.object(C.F, "contar_llm", return_value=True) as cont:
+            self.assertIsNone(C.resumir("x", "texto", fracao=0.5))          # estudo dela: nem tenta, deixa a cota para o dono
+            cont.assert_not_called()
+            with _m.patch.object(C, "_nuvem", side_effect=G.GroqError("HTTP 429")), _m.patch.object(C, "_local", return_value=C._SEM_LOCAL):
+                r = C._responder("oi")
+        self.assertIn("limite de uso", r)
+        self.assertNotIn("sem conexão", r)
+

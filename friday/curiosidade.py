@@ -368,7 +368,9 @@ def _ler_da_web(q):
 
 def _aprender_de(tema, partes, pedido):
     """Poucas páginas: um resumo de tudo. Muitas: cada página é resumida (e limpa) e o estudo final junta o que TODAS disseram."""
-    if len(partes) <= JUNTAS:
+    if len(partes) <= JUNTAS or not pedido:
+        # estudo por conta própria: UM resumo só (não gasta a cota da Groq por página — o plano grátis tem limite por minuto);
+        # a profundidade não se perde: o texto inteiro de cada fonte é guardado à parte, sem IA (Estudos/Detalhes)
         return _resumir(tema, " ".join(partes)[:MAX_TEXTO], pedido)
     resumos = [x for x in (limpar(_resumir(tema, p[:MAX_TEXTO], pedido)) for p in partes) if x]
     if not resumos:

@@ -6,7 +6,7 @@ chave ou conteúdo integral das conversas em logs. A API é externa: os prompts 
 from __future__ import annotations
 
 import json
-import os
+import os, time
 from typing import Any, Callable
 
 import requests
@@ -105,6 +105,12 @@ def chat_completion(
                 json=simples,
                 timeout=timeout,
             )
+        if getattr(response, "status_code", 200) == 429:          # cota da Groq estourada (por minuto ou por dia): anota até quando
+            try:
+                espera = float(response.headers.get("retry-after", "60"))
+            except (TypeError, ValueError, AttributeError):
+                espera = 60.0
+            LIMITE["ate"] = time.time() + max(5.0, min(espera, 3600.0))
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as exc:
@@ -117,6 +123,14 @@ def chat_completion(
     if not isinstance(data, dict) or not data.get("choices"):
         raise GroqError("A API Groq não retornou choices")
     return data
+
+
+LIMITE = {"ate": 0.0}          # até quando a Groq disse «limite atingido» (HTTP 429)
+
+
+def limitada():
+    """Segundos que ainda faltam do limite da Groq (0 = livre)."""
+    return max(0.0, LIMITE["ate"] - time.time())
 
 
 def responder(

@@ -155,7 +155,7 @@ class Estudo(Web):
 
     def test_le_todas_as_paginas_sem_teto_e_aprende_de_cada_uma(self):
         self.busca = [{"t": f"P{i}", "u": f"https://site{i}.example/x", "s": ""} for i in range(9)]
-        r = CUR.estudar("memória e sono")
+        r = CUR.estudar("memória e sono", pedido=True)
         self.assertEqual(len(r["hosts"]), 9)                                  # sem teto: todas as que a busca trouxe
         self.assertEqual(sum(1 for c in self.chamadas if c[0] == "resumir"), 10)   # 9 páginas, cada uma resumida, + a síntese
         self.assertIn("site8.example", self.base("Estudos", "Memória e sono.md").read_text(encoding="utf-8"))
@@ -182,6 +182,13 @@ class Estudo(Web):
         self.paginas = {BUSCA[1]["u"]: PAGINA + "O ciclo completo de sono dura cerca de noventa minutos e se repete várias vezes por noite. " * 2}
         CUR.estudar("memória e sono")
         self.assertTrue(list(self.base("Arquivo").glob("Detalhe Memória e sono — saude.example*")))
+
+    def test_estudo_por_conta_propria_nao_gasta_a_cota_por_pagina(self):
+        self.busca = [{"t": f"P{i}", "u": f"https://site{i}.example/x", "s": ""} for i in range(9)]
+        r = CUR.estudar("memória e sono")                                     # iniciativa dela
+        self.assertEqual(len(r["hosts"]), 9)
+        self.assertEqual(sum(1 for c in self.chamadas if c[0] == "resumir"), 1)   # um resumo só; os detalhes vêm inteiros, sem IA
+        self.assertEqual(r["detalhes"], 9)
 
     def test_o_dono_pode_por_um_teto(self):
         self.busca = [{"t": f"P{i}", "u": f"https://site{i}.example/x", "s": ""} for i in range(9)]

@@ -220,6 +220,9 @@ def resumir(instrucao, texto, max_tokens=350, fracao=1.0, sistema=None):
     modo = _modo()
     if modo != "local" and _provedor_nuvem() == "groq" and os.getenv("GROQ_API_KEY"):
         try:
+            import provedor_groq as _G
+            if float(fracao) < 1 and _G.limitada():
+                return None                     # a Groq está no limite: estudo dela espera (resumo simples); a cota que volta é da sua conversa
             if F.contar_llm(int(int(os.getenv("LIMITE_DIARIO", "200")) * max(0.0, min(1.0, float(fracao))))):
                 from provedor_groq import responder as responder_groq
                 resposta = responder_groq([{"role": "user", "content": msg}], sistema=sistema, max_tokens=max_tokens)
@@ -338,6 +341,14 @@ def _responder(texto):
                 t2.contaminado = externo
                 r = _local(_hist(), texto, t2, sistema)
                 contaminado = contaminado or t2.contaminado
+                try:
+                    import provedor_groq as _G
+                    if r == _SEM_LOCAL and _provedor_nuvem() == "groq" and _G.limitada():
+                        m = max(1, round(_G.limitada() / 60))
+                        r = (f"A Groq está no limite de uso agora (muitas chamadas seguidas no plano grátis). "
+                             f"Tente de novo em uns {m} minuto{'s' if m > 1 else ''}; enquanto isso, os meus estudos esperam para deixar a cota para você.")
+                except Exception:
+                    pass
     T.MODO_IA["v"] = modo
     HIST.extend([{"role": "user", "content": texto}, {"role": "assistant", "content": r or "..."}])
     del HIST[:-20]

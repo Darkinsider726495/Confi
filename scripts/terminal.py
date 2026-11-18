@@ -116,6 +116,18 @@ def main():
             return 0
         if not t:
             continue
+        if t.endswith(":") or t.startswith("```"):              # bloco de código colado: junta as linhas até uma linha vazia
+            linhas = [t]
+            print(f"{C['ci']}  (bloco de várias linhas: termine com uma linha vazia){C['x']}")
+            while True:
+                try:
+                    l = input("  … ")
+                except (EOFError, KeyboardInterrupt):
+                    break
+                if not l.strip():
+                    break
+                linhas.append(l)
+            t = "\n".join(linhas)
         if t.lower() in ("/sair", "/q", "sair", "exit", "quit", "/exit"):
             return 0
         if re.match(r"^(bash|sh|cd|python3?|pkg|apt|ls|termux-[a-z-]+|nohup|curl|git|echo)\b", t):
