@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import vigia as VIG  # modo vigia: protege e avisa (chave errada, Wi-Fi novo, app novo); nunca ataca
 import sincronia as SINC  # cofre sincronizado com o PC direto pelo Wi-Fi (só o dono liga; só rede local; só com a chave)
 import recompensa as RC  # aprendizado por recompensa: o feedback do dono ensina o ESTILO das respostas
 import rotina as ROT  # GRU (rede recorrente) que aprende a rotina do dono pelo registro de atividades e prevê a próxima hora
@@ -203,6 +204,8 @@ def processar(t):
         if r is None:
             r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
         if r is None:
+            r = VIG.tratar(t)  # «liga/desliga o modo vigia», «como está a minha segurança?»
+        if r is None:
             r = SINC.tratar(t)  # «liga/desliga a sincronização com o PC», «como está a sincronização?»
         if r is None:
             r = RC.tratar(t)  # «boa resposta» / «resposta ruim» (recompensa), «o que você aprendeu com meu feedback?»
@@ -321,7 +324,11 @@ class HUD(http.server.BaseHTTPRequestHandler):
         return self.headers.get("Host", "") in PERMITIDOS
 
     def _auth(self):
-        return hmac.compare_digest(self.headers.get("X-Friday-Token", "").encode(), TOKEN.encode())
+        dada = self.headers.get("X-Friday-Token", "")
+        ok = hmac.compare_digest(dada.encode(), TOKEN.encode())
+        if dada and not ok:
+            VIG.tentativa_errada("painel")   # alguém mandou uma chave errada: o vigia avisa o dono
+        return ok
 
     def do_GET(self):
         if not self._host_ok():
@@ -371,6 +378,22 @@ class HUD(http.server.BaseHTTPRequestHandler):
                 return self._json({"ok": True, "modelos": MAOS.modelos()})
             vs = MAOS.carregar(urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("nome", [""])[0])
             return self._json({"ok": True, "voxels": vs}) if vs else self._json({"ok": False, "msg": "modelo não encontrado"}, 404)
+        if p == "/estudos/dados":  # o que ela aprendeu na internet (só leitura, com a chave)
+            if not self._auth():
+                return self._json({"ok": False, "msg": "sem chave"}, 401)
+            import estudos_tela as ET
+            t = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("titulo", [""])[0]
+            if t:
+                e = ET.abrir(t)
+                return self._json({"ok": True, **e}) if e else self._json({"ok": False, "msg": "estudo não encontrado"}, 404)
+            return self._json({"ok": True, "estudos": ET.lista()})
+        if p == "/estudos":  # a página só confere o host; os dados exigem a chave
+            with open(os.path.join(BASE, "estudos.html"), "rb") as f:
+                b = f.read()
+            self.send_response(200)
+            self._cabecalhos("text/html; charset=utf-8", len(b))
+            self.end_headers()
+            return self.wfile.write(b)
         if p == "/mente/dados":  # números reais das camadas da mente (só leitura, com a chave)
             if not self._auth():
                 return self._json({"ok": False, "msg": "sem chave"}, 401)
@@ -606,6 +629,7 @@ def main():
     if SINC.ligada():
         SINC.iniciar()  # o dono deixou a sincronia com o PC ligada: o servidor dela volta junto
     F.GANCHOS.append(BK.gancho)  # backup semanal do cérebro, sozinha
+    F.GANCHOS.append(VIG.gancho)  # vigia: avisa tentativa de chave errada na hora; Wi-Fi/app novo a cada 5 min
     if ANDROID:
         threading.Thread(target=ESC.laco, args=(processar, falar, lambda: ESTADO.get("estado")), daemon=True).start()  # escuta contínua (se o dono ligou)
     threading.Thread(target=F.proativo, args=(lambda m: falar(m, proativo=True),), daemon=True).start()

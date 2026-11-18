@@ -273,6 +273,11 @@ class _H(http.server.BaseHTTPRequestHandler):
             return False
         if not hmac.compare_digest(self.headers.get("X-Sync-Chave", "").encode(), chave().encode()):
             _falhas["n"] += 1
+            try:
+                import vigia as VIG
+                VIG.tentativa_errada("sync")
+            except Exception:
+                pass
             if _falhas["n"] >= 5:
                 _falhas.update(n=0, ate=time.time() + 60)
             self._resp(401, {"ok": False})

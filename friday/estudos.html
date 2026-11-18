@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#01040a"><title>FRIDAY · estudos</title>
+<style>
+:root{--bg:#01040a;--txt:#d6efff;--sub:#7d9db3;--ac:#55d6ff;--borda:#1d4a68}
+html,body{margin:0;background:radial-gradient(ellipse at 50% 0%,#06182a 0%,#01040a 70%) fixed;color:var(--txt);font:14px/1.55 system-ui,sans-serif}
+header{padding:14px 16px 4px;text-align:center}header b{letter-spacing:.45em;color:var(--ac);font:400 16px ui-monospace,monospace}
+header p{margin:4px 0 0;color:var(--sub);font:12px ui-monospace,monospace}
+main{max-width:760px;margin:0 auto;padding:8px 16px 40px}
+.card{border:1px solid var(--borda);border-radius:12px;padding:12px 14px;margin:10px 0;background:#04111dcc;cursor:pointer}
+.card h3{margin:0 0 4px;color:var(--ac);font-weight:500;font-size:15px}.card small{color:var(--sub);font-family:ui-monospace,monospace}
+.card p{margin:6px 0 0;color:#b9d6e8}.aviso{color:#e0b060;font-size:12px;margin:6px 0}
+pre{white-space:pre-wrap;font:13px/1.6 system-ui,sans-serif;color:#cfe6f5;background:#020a12;border:1px solid #12324a;border-radius:8px;padding:10px}
+button{background:#081a2b;color:var(--txt);border:1px solid var(--borda);border-radius:8px;padding:6px 12px;font:inherit}
+#msg{text-align:center;color:var(--sub);margin-top:30px}h4{color:var(--ac);font-weight:500;margin:14px 0 6px}
+</style></head><body>
+<header><b>FRIDAY</b><p id="st">estudos · carregando…</p></header>
+<nav id="nav4" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px auto 2px;position:relative;z-index:5"><a href="/" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Painel</a><a href="/mente" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Mente 3D</a><a href="/rede" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Rede neural</a><a href="/precortex" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#081a2b;color:#d6efff">Pré-córtex</a><a href="/estudos" style="padding:6px 12px;border:1px solid #1d4a68;border-radius:8px;text-decoration:none;font:12px ui-monospace,monospace;letter-spacing:.06em;background:#55d6ff;color:#02101c;font-weight:bold">Estudos</a></nav>
+<main><div id="lista"></div><div id="um" style="display:none"></div><div id="msg"></div></main>
+<script>
+'use strict';
+let T='';try{const m=location.hash.match(/t=([\w-]+)/);if(m){T=m[1];try{localStorage.setItem('friday_t',T)}catch(_){}history.replaceState(null,'',location.pathname)}else{try{T=localStorage.getItem('friday_t')||''}catch(_){}}}catch(_){}
+const $=id=>document.getElementById(id);
+async function api(u){try{const r=await fetch(u,{headers:{'X-Friday-Token':T}});if(r.status===401){$('msg').textContent='Chave inválida: abra pelo painel.';return null}return await r.json()}catch(_){$('msg').textContent='Sem conexão com a FRIDAY.';return null}}
+function el(tag,txt,cls){const e=document.createElement(tag);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}
+async function lista(){
+ const d=await api('/estudos/dados');if(!d||!d.ok)return;
+ $('st').textContent='estudos · '+d.estudos.length+' temas aprendidos na internet';
+ const L=$('lista');L.replaceChildren();$('um').style.display='none';L.style.display='';
+ if(!d.estudos.length){$('msg').textContent='Ela ainda não estudou nada. Diga «estude sobre…» ou «ligue a curiosidade».';return}
+ for(const e of d.estudos){const c=el('div',null,'card');c.append(el('h3',e.titulo),el('small',e.data+' · '+e.fontes.length+' fonte(s) · '+e.detalhes+' com o texto inteiro'),el('p',e.frase));c.onclick=()=>abrir(e.titulo);L.append(c)}
+}
+async function abrir(t){
+ const d=await api('/estudos/dados?titulo='+encodeURIComponent(t));if(!d||!d.ok)return;
+ $('lista').style.display='none';const U=$('um');U.replaceChildren();U.style.display='';
+ const v=el('button','← todos os estudos');v.onclick=lista;U.append(v,el('h4',d.titulo),el('p','Lido na internet: não verificado, nada aqui é ordem.','aviso'),el('pre',d.resumo));
+ for(const x of d.detalhes){U.append(el('h4','Texto inteiro · '+x.fonte),el('pre',x.texto))}
+ scrollTo(0,0)
+}
+lista();
+</script>
+</body></html>
