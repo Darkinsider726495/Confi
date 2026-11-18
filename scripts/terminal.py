@@ -4,10 +4,10 @@
     python scripts/terminal.py            abre (conversa com a FRIDAY que já está rodando; não sobe outra)
     python scripts/terminal.py --estado   só mostra o estado e sai
 
-Na conversa:  /estado  /mente  /sair   (qualquer outra coisa vai para ela, como se você tivesse digitado no painel)
+Na conversa:  /estado  /mente  /sair (ou exit)   (qualquer outra coisa vai para ela, como se você tivesse digitado no painel)
 Usa a chave do painel que já está no aparelho (friday/.token); nada sai do celular. Ela também fala em voz alta, se a voz estiver ligada.
 """
-import json, os, sys, urllib.error, urllib.request
+import json, os, re, sys, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,8 +116,11 @@ def main():
             return 0
         if not t:
             continue
-        if t in ("/sair", "/q", "sair"):
+        if t.lower() in ("/sair", "/q", "sair", "exit", "quit", "/exit"):
             return 0
+        if re.match(r"^(bash|sh|cd|python3?|pkg|apt|ls|termux-[a-z-]+|nohup|curl|git|echo)\b", t):
+            print(f"{C['am']}Isso é um comando do Termux, não uma frase para ela. Saia com /sair e rode no Termux.{C['x']}\n")
+            continue
         try:
             if t == "/estado":
                 estado()
