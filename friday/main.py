@@ -26,6 +26,7 @@ import visao as VIS
 import maos as MAOS
 import prefrontal as PFC
 import nucleo as NC  # atenção observacional: nunca serializa tarefas nem trabalhadores do pré-córtex
+import treinador as TREINO  # treinador diário: ela se estimula sozinha (aprofunda os assuntos do dia, revisa, reajusta as redes)
 import relatorio as REL  # relatório de evolução: números do dia + investigação do que deu errado
 import vigia as VIG  # modo vigia: protege e avisa (chave errada, Wi-Fi novo, app novo); nunca ataca
 import sincronia as SINC  # cofre sincronizado com o PC direto pelo Wi-Fi (só o dono liga; só rede local; só com a chave)
@@ -204,6 +205,8 @@ def processar(t):
             r = NOTI.tratar(t)  # «o que chegou?», «lê as do WhatsApp» (local, sem IA)
         if r is None:
             r = ESC.tratar(t)  # «fique sempre ouvindo» / «pare de ouvir sempre» (só o dono)
+        if r is None:
+            r = TREINO.tratar(t)  # «treine agora», «como foi o seu treino?», liga/desliga o treino diário
         if r is None:
             r = REL.tratar(t)  # «como você evoluiu?», «relatório de evolução»
         if r is None:
@@ -632,6 +635,7 @@ def main():
     if SINC.ligada():
         SINC.iniciar()  # o dono deixou a sincronia com o PC ligada: o servidor dela volta junto
     F.GANCHOS.append(BK.gancho)  # backup semanal do cérebro, sozinha
+    F.GANCHOS.append(TREINO.gancho)  # treino diário depois de TREINO_HORA
     F.GANCHOS.append(REL.gancho)  # anota os números do dia (uma vez por dia)
     F.GANCHOS.append(VIG.gancho)  # vigia: avisa tentativa de chave errada na hora; Wi-Fi/app novo a cada 5 min
     if ANDROID:
