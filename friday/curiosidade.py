@@ -21,7 +21,16 @@ import estado as ES
 import broker as B
 
 MAX_TEMAS, MAX_NOVIDADES = 200, 20
-MAX_PAGINAS, MAX_TEXTO, MAX_RESUMO = 3, 6000, 900
+MAX_TEXTO, MAX_RESUMO = 6000, 900
+JUNTAS = 3                     # até 3 páginas cabem num resumo só; com mais, cada página é resumida e depois os resumos viram um estudo
+
+
+def max_paginas():
+    """Quantas páginas por estudo. 0 = SEM TETO (padrão): ela lê todas as que a busca trouxer. CURIOSIDADE_PAGINAS no .env põe um teto."""
+    try:
+        return max(0, int(os.getenv("CURIOSIDADE_PAGINAS", "0") or 0))
+    except ValueError:
+        return 0
 LIMIAR_ESTUDAR = 0.55          # vontade_estudar() mínima para ela abrir um estudo sozinha
 ASSINCRONO = True              # "estude sobre X" responde na hora e estuda em segundo plano (testes desligam)
 FALAR = None                   # quem fala por iniciativa dela (main.py liga): FALAR(texto)
@@ -301,10 +310,11 @@ def _resumir(tema, texto, pedido=True):
 
 
 def _ler_da_web(q):
-    """(hosts, texto). Até MAX_PAGINAS páginas públicas de sites diferentes; página que falha na barreira de segurança é ignorada."""
-    hosts, partes = [], []
-    for r in I.resultados(q):
-        if len(hosts) >= MAX_PAGINAS:
+    """(hosts, páginas). Todas as páginas públicas que a busca trouxer (ou até CURIOSIDADE_PAGINAS), uma por site; página que falha na
+    barreira de segurança é ignorada."""
+    hosts, partes, teto = [], [], max_paginas()
+    for r in I.resultados(q, n=0):
+        if teto and len(hosts) >= teto:
             break
         try:
             host, txt = I.texto_pagina(r.get("u", ""), limite=2500)
@@ -313,7 +323,17 @@ def _ler_da_web(q):
         if host and host not in hosts and len(txt) > 200:
             hosts.append(host)
             partes.append(txt)
-    return hosts, " ".join(partes)[:MAX_TEXTO]
+    return hosts, partes
+
+
+def _aprender_de(tema, partes, pedido):
+    """Poucas páginas: um resumo de tudo. Muitas: cada página é resumida (e limpa) e o estudo final junta o que TODAS disseram."""
+    if len(partes) <= JUNTAS:
+        return _resumir(tema, " ".join(partes)[:MAX_TEXTO], pedido)
+    resumos = [x for x in (limpar(_resumir(tema, p[:MAX_TEXTO], pedido)) for p in partes) if x]
+    if not resumos:
+        return ""
+    return _resumir(tema, " ".join(resumos)[:MAX_TEXTO], pedido)
 
 
 def _seguir(resumo, tema):
@@ -359,12 +379,12 @@ def estudar(tema=None, pedido=False, rng=random, meta=None):
         e["dia"]["n"] += 1
         e["ult"] = time.time()
         try:
-            hosts, texto = _ler_da_web(q)
+            hosts, partes = _ler_da_web(q)
         except Exception as ex:
             return _falhou(e, f"sem internet ou busca indisponível ({type(ex).__name__})")
-        if not texto:
+        if not partes:
             return _falhou(e, "não consegui ler nenhuma página")
-        limpo = limpar(_resumir(tema, texto, pedido))
+        limpo = limpar(_aprender_de(tema, partes, pedido))
         if not limpo:
             return _falhou(e, "não sobrou nada aproveitável", contar=False)
         try:

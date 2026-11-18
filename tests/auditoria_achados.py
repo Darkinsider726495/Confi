@@ -195,7 +195,7 @@ def p_progresso():
     ok, a = PFC.nova_meta("aprender", "buracos negros")
     ok2, b = PFC.nova_meta("aprender", "criptografia")
     PAG = {"https://a.example/x": ("a.example", "A criptografia protege dados com chaves e algoritmos matemáticos. " * 8)}
-    I.resultados = lambda q: [{"t": "Cripto", "u": u, "s": ""} for u in PAG]
+    I.resultados = lambda q, n=5: [{"t": "Cripto", "u": u, "s": ""} for u in PAG]
     I.texto_pagina = lambda u, limite=2500: PAG[u]
     ra = CUR.estudar("singularidades", pedido=True, rng=random.Random(1), meta=a["id"]) if "meta" in CUR.estudar.__code__.co_varnames else {"ok": False}
     rb = CUR.estudar("criptografia explicada", pedido=True, rng=random.Random(1))

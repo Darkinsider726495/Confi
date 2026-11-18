@@ -119,21 +119,21 @@ class _Resultados(HTMLParser):
             self.r[-1][self.modo] += d
 
 
-def resultados(consulta):
-    """Resultados de busca como dados: [{'t': título, 'u': link, 's': trecho}] (até 5). Tudo é conteúdo de terceiros."""
+def resultados(consulta, n=5):
+    """Resultados de busca como dados: [{'t': título, 'u': link, 's': trecho}] (até `n`; 0 = todos os que o buscador der). Tudo é conteúdo de terceiros."""
     q = str(consulta).strip()
     if not q:
         raise ValueError("Diga o que pesquisar.")
     if os.getenv("BRAVE_API_KEY"):
-        r = requests.get("https://api.search.brave.com/res/v1/web/search", params={"q": q, "count": 5, "country": "br", "search_lang": "pt"},
+        r = requests.get("https://api.search.brave.com/res/v1/web/search", params={"q": q, "count": n if 0 < n <= 20 else 20, "country": "br", "search_lang": "pt"},
                          headers={"X-Subscription-Token": os.environ["BRAVE_API_KEY"], "Accept": "application/json"}, timeout=10)
         r.raise_for_status()
-        return [{"t": x.get("title", ""), "u": x.get("url", ""), "s": x.get("description", "")} for x in r.json().get("web", {}).get("results", [])[:5]]
+        return [{"t": x.get("title", ""), "u": x.get("url", ""), "s": x.get("description", "")} for x in r.json().get("web", {}).get("results", [])[:n or None]]
     r = requests.post("https://html.duckduckgo.com/html/", data={"q": q, "kl": "br-pt"}, headers=UA, timeout=10)
     r.raise_for_status()
     p = _Resultados()
     p.feed(r.text)
-    return p.r[:5]
+    return p.r[:n or None]
 
 
 def pesquisar_web(consulta):

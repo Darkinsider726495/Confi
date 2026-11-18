@@ -304,7 +304,7 @@ def guardar_estudo(tema, resumo, fontes=()):
     titulo = _titulo_limpo(str(tema).strip().capitalize())
     if not titulo:
         raise ValueError("tema inválido")
-    hosts = [re.sub(r"[^a-z0-9.\-]", "", str(h).lower())[:60] for h in list(fontes)[:4]]
+    hosts = [re.sub(r"[^a-z0-9.\-]", "", str(h).lower())[:60] for h in list(fontes)]                 # todas as fontes que ela leu (sem teto)
     hosts = [h for h in hosts if h]
     agora = _agora()
     with _trava:

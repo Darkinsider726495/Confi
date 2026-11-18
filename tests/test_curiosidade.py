@@ -37,7 +37,7 @@ class Web(Cerebro):
         p = mock.patch.object(CUR, "FALAR", None)
         p.start(); self.addCleanup(p.stop)
 
-    def _resultados(self, q):
+    def _resultados(self, q, n=5):
         self.chamadas.append(("busca", q))
         if isinstance(self.busca, Exception):
             raise self.busca
@@ -150,8 +150,20 @@ class Estudo(Web):
         self.assertIn(MEM.ROTULO_ESTUDO, texto)
         self.assertIn("hipocampo", texto)
         self.assertIn("ciencia.example", texto)
-        self.assertEqual(len(r["hosts"]), 3)       # no máximo MAX_PAGINAS, sites diferentes
+        self.assertEqual(len(r["hosts"]), 3)       # uma página por site (a busca falsa tem 3 sites)
         self.assertEqual(len(set(r["hosts"])), 3)
+
+    def test_le_todas_as_paginas_sem_teto_e_aprende_de_cada_uma(self):
+        self.busca = [{"t": f"P{i}", "u": f"https://site{i}.example/x", "s": ""} for i in range(9)]
+        r = CUR.estudar("memória e sono")
+        self.assertEqual(len(r["hosts"]), 9)                                  # sem teto: todas as que a busca trouxe
+        self.assertEqual(sum(1 for c in self.chamadas if c[0] == "resumir"), 10)   # 9 páginas, cada uma resumida, + a síntese
+        self.assertIn("site8.example", self.base("Estudos", "Memória e sono.md").read_text(encoding="utf-8"))
+
+    def test_o_dono_pode_por_um_teto(self):
+        self.busca = [{"t": f"P{i}", "u": f"https://site{i}.example/x", "s": ""} for i in range(9)]
+        with mock.patch.dict(os.environ, {"CURIOSIDADE_PAGINAS": "2"}):
+            self.assertEqual(len(CUR.estudar("memória e sono")["hosts"]), 2)
 
     def test_nada_vai_para_memorias_nem_para_o_diario(self):
         CUR.estudar("memória e sono")
